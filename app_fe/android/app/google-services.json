@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "1035135642767",
+    "project_id": "medic-62bfa",
+    "storage_bucket": "medic-62bfa.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1035135642767:android:f97c380d05813f477014fa",
+        "android_client_info": {
+          "package_name": "com.example.app_fe"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1035135642767-k290ik0uka0hatfs2rap7q9uq413ttmh.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.app_fe",
+            "certificate_hash": "d68863138ebc21a48f80a55da5e6e51fefdb745c"
+          }
+        },
+        {
+          "client_id": "1035135642767-bp8s63atsnmc74si6oimi29eqtjjdpej.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBRf70tL4QsUPIS8UeSVBedYPFCQHH_YLY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1035135642767-bp8s63atsnmc74si6oimi29eqtjjdpej.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
