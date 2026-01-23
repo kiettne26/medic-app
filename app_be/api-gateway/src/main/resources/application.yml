@@ -23,7 +23,7 @@ spring:
         - id: user-service
           uri: lb://user-service
           predicates:
-            - Path=/api/users/**, /api/profiles/**, /api/doctors/**, /api/services/**
+            - Path=/api/users/**, /api/profiles/**, /api/doctors/**, /api/services/**, /api/reviews/**
           filters:
             - StripPrefix=1
 

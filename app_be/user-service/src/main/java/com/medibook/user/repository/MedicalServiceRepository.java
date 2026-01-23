@@ -14,5 +14,7 @@ public interface MedicalServiceRepository extends JpaRepository<MedicalService, 
 
     List<MedicalService> findByCategory(String category);
 
+    List<MedicalService> findByCategoryAndIsActiveTrue(String category);
+
     List<MedicalService> findByNameContainingIgnoreCase(String name);
 }

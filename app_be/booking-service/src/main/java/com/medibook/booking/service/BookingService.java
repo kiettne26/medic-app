@@ -279,4 +279,28 @@ public class BookingService {
                 .isAvailable(slot.getIsAvailable())
                 .build();
     }
+
+    /**
+     * 🌱 SEED DATA: Tạo lịch mẫu cho bác sĩ (Dùng cho dev)
+     */
+    @Transactional
+    public List<TimeSlotDto> generateSlots(UUID doctorId, LocalDate date) {
+        // Clear existing slots
+        List<TimeSlot> existingSlots = timeSlotRepository.findAvailableSlotsByDoctorAndDate(doctorId, date);
+        timeSlotRepository.deleteAll(existingSlots);
+
+        // Create new slots from 08:00 to 17:00, 1 hour each
+        List<TimeSlot> slots = java.util.stream.IntStream.range(8, 17)
+                .mapToObj(hour -> TimeSlot.builder()
+                        .doctorId(doctorId)
+                        .date(date)
+                        .startTime(java.time.LocalTime.of(hour, 0))
+                        .endTime(java.time.LocalTime.of(hour + 1, 0))
+                        .isAvailable(true)
+                        .build())
+                .collect(Collectors.toList());
+
+        slots = timeSlotRepository.saveAll(slots);
+        return slots.stream().map(this::toSlotDto).collect(Collectors.toList());
+    }
 }

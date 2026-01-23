@@ -50,6 +50,20 @@ class AuthController extends StateNotifier<AuthStateData> {
       await _storage.write(key: 'access_token', value: response.accessToken);
       await _storage.write(key: 'refresh_token', value: response.refreshToken);
 
+      // Save user info
+      if (response.user != null) {
+        await _storage.write(key: 'user_id', value: response.user!.id);
+        await _storage.write(key: 'user_email', value: response.user!.email);
+        await _storage.write(
+          key: 'user_name',
+          value: response.user!.fullName ?? 'User',
+        );
+        await _storage.write(
+          key: 'user_avatar',
+          value: response.user!.avatarUrl ?? '',
+        );
+      }
+
       state = state.copyWith(status: AuthState.success, authResponse: response);
     } catch (e) {
       state = state.copyWith(
@@ -199,11 +213,17 @@ class AuthController extends StateNotifier<AuthStateData> {
     }
   }
 
-  /// Logout: Clear tokens and reset state
   Future<void> logout() async {
     // print('[Auth] Logging out...');
     await _storage.delete(key: 'access_token');
     await _storage.delete(key: 'refresh_token');
+
+    // Clear user info
+    await _storage.delete(key: 'user_id');
+    await _storage.delete(key: 'user_name');
+    await _storage.delete(key: 'user_email');
+    await _storage.delete(key: 'user_avatar');
+
     state = AuthStateData(); // Reset to initial state
     // print('[Auth] Logged out successfully');
   }

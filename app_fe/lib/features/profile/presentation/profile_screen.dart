@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:app_fe/features/auth/presentation/auth_controller.dart';
 import 'package:app_fe/config/router.dart';
+import '../presentation/user_provider.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -13,38 +13,23 @@ class ProfileScreen extends ConsumerStatefulWidget {
 }
 
 class _ProfileScreenState extends ConsumerState<ProfileScreen> {
-  final FlutterSecureStorage _storage = const FlutterSecureStorage();
-  String _userName = 'Người dùng';
   String _userEmail = 'user@example.com';
-  String _userAvatar = '';
-  String _userId = '';
 
   @override
   void initState() {
     super.initState();
-    _loadUserInfo();
-  }
-
-  Future<void> _loadUserInfo() async {
-    final name = await _storage.read(key: 'user_name');
-    final email = await _storage.read(key: 'user_email');
-    final avatar = await _storage.read(key: 'user_avatar');
-    final id = await _storage.read(key: 'user_id');
-
-    if (mounted) {
-      setState(() {
-        _userName = name ?? 'Người dùng';
-        _userEmail = email ?? 'user@example.com';
-        _userAvatar = avatar ?? '';
-        _userId = id != null && id.length > 8
-            ? id.substring(0, 8)
-            : (id ?? '---');
-      });
-    }
+    // Refresh user profile on init
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(userProvider.notifier).refreshProfile();
+    });
   }
 
   @override
   Widget build(BuildContext context) {
+    final userState = ref.watch(userProvider);
+    final userName = userState.name;
+    final userAvatar = userState.avatar;
+
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7F8), // background-light
       body: SafeArea(
@@ -59,7 +44,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 child: Column(
                   children: [
                     const SizedBox(height: 16), // Reduced from 24
-                    _buildUserInfo(),
+                    const SizedBox(height: 16), // Reduced from 24
+                    _buildUserInfo(userName, userAvatar, userState.id),
                     const SizedBox(height: 24), // Reduced from 32
                     _buildMenuOptions(),
                     const SizedBox(height: 32), // Reduced from 48
@@ -116,7 +102,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     );
   }
 
-  Widget _buildUserInfo() {
+  Widget _buildUserInfo(String userName, String userAvatar, String userId) {
     return Column(
       children: [
         Stack(
@@ -131,14 +117,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   color: const Color(0xFF297EFF).withOpacity(0.1),
                   width: 4,
                 ),
-                image: _userAvatar.isNotEmpty
+                image: userAvatar.isNotEmpty
                     ? DecorationImage(
-                        image: NetworkImage(_userAvatar),
+                        image: NetworkImage(userAvatar),
                         fit: BoxFit.cover,
                       )
                     : null,
               ),
-              child: _userAvatar.isEmpty
+              child: userAvatar.isEmpty
                   ? const Icon(Icons.person, size: 60, color: Color(0xFF297EFF))
                   : null,
             ),
@@ -155,7 +141,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         ),
         const SizedBox(height: 12), // Reduced from 16
         Text(
-          _userName,
+          userName,
           style: const TextStyle(
             fontSize: 20, // Reduced from 24
             fontWeight: FontWeight.bold,
@@ -182,7 +168,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             borderRadius: BorderRadius.circular(100),
           ),
           child: Text(
-            'ID: $_userId',
+            'ID: $userId',
             style: const TextStyle(
               color: Color(0xFF297EFF),
               fontSize: 11, // Reduced from 12
@@ -203,7 +189,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             icon: Icons.person_outline, // person_edit replacement
             label: 'Chỉnh sửa hồ sơ',
             color: const Color(0xFF297EFF),
-            onTap: () {},
+            onTap: () async {
+              await context.push('/edit-profile');
+              // Reload profile info when returning from edit screen
+              ref.read(userProvider.notifier).refreshProfile();
+            },
           ),
           const SizedBox(height: 12), // Reduced from 16
           _buildMenuItem(
@@ -218,7 +208,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             label: 'Cài đặt',
             color: const Color(0xFF5E718D),
             iconBgColor: const Color(0xFFF1F5F9), // slate-100
-            onTap: () {},
+            onTap: () {
+              context.push('/settings');
+            },
           ),
           const SizedBox(height: 12), // Reduced from 16
           _buildMenuItem(

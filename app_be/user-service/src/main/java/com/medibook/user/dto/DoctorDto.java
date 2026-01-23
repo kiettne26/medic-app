@@ -15,6 +15,7 @@ import java.util.UUID;
 public class DoctorDto {
     private UUID id;
     private UUID userId;
+    private String fullName;
     private String specialty;
     private String description;
     private String phone;

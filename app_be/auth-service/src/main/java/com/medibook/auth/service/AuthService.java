@@ -6,7 +6,6 @@ import com.medibook.auth.entity.User;
 import com.medibook.auth.repository.RefreshTokenRepository;
 import com.medibook.auth.repository.UserRepository;
 import com.medibook.auth.security.JwtTokenProvider;
-import com.medibook.common.enums.Role;
 import com.medibook.common.exception.BadRequestException;
 import com.medibook.common.exception.UnauthorizedException;
 import lombok.RequiredArgsConstructor;
@@ -28,14 +27,18 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class AuthService {
 
+    private final UserRepository userRepository;
+    private final RefreshTokenRepository refreshTokenRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final JwtTokenProvider tokenProvider;
+    private final AuthenticationManager authenticationManager;
+
     /**
      * Social Login
      */
     @Transactional
     public AuthResponse socialLogin(SocialLoginRequest request) {
         log.info("Social Login request: email={}, provider={}", request.getEmail(), request.getProvider());
-
-        // TODO: Verify token with Google/Facebook servers (Optional security step)
 
         return userRepository.findByEmail(request.getEmail())
                 .map(user -> {
@@ -49,9 +52,9 @@ public class AuthService {
                     // Register new social user
                     User newUser = User.builder()
                             .email(request.getEmail())
-                            .fullName(request.getName()) // Fix: Use getName() from DTO
+                            .fullName(request.getName())
                             .passwordHash(passwordEncoder.encode(UUID.randomUUID().toString()))
-                            .role(Role.PATIENT)
+                            .role("PATIENT") // Default
                             .enabled(true)
                             .avatarUrl(request.getAvatar())
                             .build();
@@ -61,12 +64,6 @@ public class AuthService {
                     return generateAuthResponse(savedUser);
                 });
     }
-
-    private final UserRepository userRepository;
-    private final RefreshTokenRepository refreshTokenRepository;
-    private final PasswordEncoder passwordEncoder;
-    private final JwtTokenProvider tokenProvider;
-    private final AuthenticationManager authenticationManager;
 
     /**
      * Đăng ký tài khoản mới
@@ -84,7 +81,7 @@ public class AuthService {
                 .passwordHash(passwordEncoder.encode(request.getPassword()))
                 .fullName(request.getFullName())
                 .phone(request.getPhone())
-                .role(Role.PATIENT) // Mặc định là PATIENT
+                .role("PATIENT") // Default
                 .enabled(true)
                 .build();
 
@@ -99,45 +96,26 @@ public class AuthService {
      */
     @Transactional
     public AuthResponse login(LoginRequest request) {
-        // Xác thực credentials
+        log.info("Login attempt: {}", request.getEmail());
+
+        // Authenticate using Spring Security
         authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword()));
+                new UsernamePasswordAuthenticationToken(
+                        request.getEmail(),
+                        request.getPassword()));
 
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new UnauthorizedException("Email hoặc mật khẩu không đúng"));
 
-        if (!user.getEnabled()) {
-            throw new UnauthorizedException("Tài khoản đã bị vô hiệu hóa");
-        }
+        // Revoke old tokens
+        refreshTokenRepository.revokeAllByUser(user);
 
         log.info("User logged in successfully: {}", user.getEmail());
         return generateAuthResponse(user);
     }
 
     /**
-     * Refresh access token
-     */
-    @Transactional
-    public AuthResponse refreshToken(RefreshTokenRequest request) {
-        RefreshToken refreshToken = refreshTokenRepository.findByToken(request.getRefreshToken())
-                .orElseThrow(() -> new UnauthorizedException("Refresh token không hợp lệ"));
-
-        if (!refreshToken.isValid()) {
-            throw new UnauthorizedException("Refresh token đã hết hạn hoặc bị thu hồi");
-        }
-
-        User user = refreshToken.getUser();
-
-        // Revoke old refresh token
-        refreshToken.setRevoked(true);
-        refreshTokenRepository.save(refreshToken);
-
-        log.info("Token refreshed for user: {}", user.getEmail());
-        return generateAuthResponse(user);
-    }
-
-    /**
-     * Logout - Thu hồi tất cả refresh tokens của user
+     * Đăng xuất
      */
     @Transactional
     public void logout(String email) {
@@ -152,11 +130,11 @@ public class AuthService {
      * Generate auth response với access + refresh tokens
      */
     private AuthResponse generateAuthResponse(User user) {
-        // Generate access token
+        // Generate access token (Role is String now)
         String accessToken = tokenProvider.generateAccessToken(
                 user.getId(),
                 user.getEmail(),
-                user.getRole().name());
+                user.getRole());
 
         // Generate và lưu refresh token
         String refreshTokenValue = tokenProvider.generateRefreshToken();
@@ -182,5 +160,47 @@ public class AuthService {
                         .role(user.getRole())
                         .build())
                 .build();
+    }
+
+    /**
+     * Refresh Token
+     */
+    @Transactional
+    public AuthResponse refreshToken(RefreshTokenRequest request) {
+        String requestRefreshToken = request.getRefreshToken();
+
+        return refreshTokenRepository.findByToken(requestRefreshToken)
+                .map(this::verifyExpiration)
+                .map(RefreshToken::getUser)
+                .map(user -> {
+                    String accessToken = tokenProvider.generateAccessToken(
+                            user.getId(),
+                            user.getEmail(),
+                            user.getRole());
+
+                    return AuthResponse.builder()
+                            .accessToken(accessToken)
+                            .refreshToken(requestRefreshToken)
+                            .tokenType("Bearer")
+                            .expiresIn(tokenProvider.getAccessTokenExpiration() / 1000)
+                            .user(AuthResponse.UserInfo.builder()
+                                    .id(user.getId())
+                                    .email(user.getEmail())
+                                    .fullName(user.getFullName())
+                                    .phone(user.getPhone())
+                                    .avatarUrl(user.getAvatarUrl())
+                                    .role(user.getRole())
+                                    .build())
+                            .build();
+                })
+                .orElseThrow(() -> new UnauthorizedException("Refresh token không tồn tại"));
+    }
+
+    private RefreshToken verifyExpiration(RefreshToken token) {
+        if (token.getExpiresAt().compareTo(Instant.now()) < 0) {
+            refreshTokenRepository.delete(token);
+            throw new UnauthorizedException("Refresh token đã hết hạn");
+        }
+        return token;
     }
 }

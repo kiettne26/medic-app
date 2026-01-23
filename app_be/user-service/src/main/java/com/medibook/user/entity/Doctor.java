@@ -31,6 +31,9 @@ public class Doctor {
     @Column(nullable = false)
     private String specialty; // Chuyên khoa
 
+    @Column(name = "full_name")
+    private String fullName; // Tên bác sĩ
+
     @Column(columnDefinition = "TEXT")
     private String description; // Mô tả, kinh nghiệm
 

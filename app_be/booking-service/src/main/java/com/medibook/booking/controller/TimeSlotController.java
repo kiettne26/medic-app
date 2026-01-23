@@ -32,4 +32,12 @@ public class TimeSlotController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
         return ResponseEntity.ok(ApiResponse.success(bookingService.getAvailableSlots(doctorId, date)));
     }
+
+    @PostMapping("/init")
+    @Operation(summary = "Tạo lịch mẫu cho bác sĩ (Dev only)")
+    public ResponseEntity<ApiResponse<List<TimeSlotDto>>> initSlots(
+            @RequestParam UUID doctorId,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        return ResponseEntity.ok(ApiResponse.success(bookingService.generateSlots(doctorId, date)));
+    }
 }

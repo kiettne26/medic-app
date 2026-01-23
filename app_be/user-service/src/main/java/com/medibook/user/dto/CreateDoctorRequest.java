@@ -22,6 +22,9 @@ public class CreateDoctorRequest {
     @NotBlank(message = "Chuyên khoa không được để trống")
     private String specialty;
 
+    @NotBlank(message = "Tên bác sĩ không được để trống")
+    private String fullName;
+
     private String description;
     private String phone;
     private String avatarUrl;

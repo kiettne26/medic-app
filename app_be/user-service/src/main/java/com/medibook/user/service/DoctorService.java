@@ -80,6 +80,7 @@ public class DoctorService {
     public DoctorDto createDoctor(CreateDoctorRequest request) {
         Doctor doctor = Doctor.builder()
                 .userId(request.getUserId())
+                .fullName(request.getFullName())
                 .specialty(request.getSpecialty())
                 .description(request.getDescription())
                 .phone(request.getPhone())
@@ -136,6 +137,21 @@ public class DoctorService {
     }
 
     /**
+     * Cập nhật rating và totalReviews của bác sĩ
+     * Được gọi sau khi có review mới, cập nhật, hoặc xóa
+     */
+    @Transactional
+    public void updateDoctorRating(UUID doctorId, Double averageRating, long totalReviews) {
+        Doctor doctor = doctorRepository.findById(doctorId)
+                .orElseThrow(() -> new ResourceNotFoundException("Doctor", "id", doctorId));
+
+        doctor.setRating(averageRating != null ? averageRating : 0.0);
+        doctor.setTotalReviews((int) totalReviews);
+        doctorRepository.save(doctor);
+        log.info("Doctor rating updated: id={}, rating={}, totalReviews={}", doctorId, averageRating, totalReviews);
+    }
+
+    /**
      * Convert entity to DTO
      */
     private DoctorDto toDto(Doctor doctor) {
@@ -155,6 +171,7 @@ public class DoctorService {
         return DoctorDto.builder()
                 .id(doctor.getId())
                 .userId(doctor.getUserId())
+                .fullName(doctor.getFullName())
                 .specialty(doctor.getSpecialty())
                 .description(doctor.getDescription())
                 .phone(doctor.getPhone())

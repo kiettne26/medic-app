@@ -65,8 +65,23 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> handleGenericException(Exception ex) {
+        // LOG FULL STACK TRACE
+        ex.printStackTrace();
+
         String exceptionName = ex.getClass().getSimpleName();
         String message = ex.getMessage();
+        Throwable cause = ex.getCause();
+        if (cause != null) {
+            message += " [Cause: " + cause.getMessage() + "]";
+            cause.printStackTrace();
+        }
+
+        // Handle BadCredentials (Spring Security) without dependency
+        if (exceptionName.equals("BadCredentialsException") || message.contains("Bad credentials")) {
+            return ResponseEntity
+                    .status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error("Email hoặc mật khẩu không đúng"));
+        }
 
         // Handle Duplicate Entry (without adding dependency to common)
         if (exceptionName.contains("DataIntegrityViolation")) {

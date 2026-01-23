@@ -5,13 +5,13 @@ spring:
   application:
     name: booking-service
   datasource:
-    url: jdbc:postgresql://${SUPABASE_HOST:aws-1-ap-southeast-1.pooler.supabase.com}:${SUPABASE_PORT:6543}/postgres
+    url: "jdbc:postgresql://${SUPABASE_HOST:aws-1-ap-southeast-1.pooler.supabase.com}:${SUPABASE_PORT:6543}/postgres?stringtype=unspecified&prepareThreshold=0"
     username: ${SUPABASE_USER:postgres.dslbtevbqmxlmulqxcqk}
     password: ${SUPABASE_PASSWORD:your-password}
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: none
     show-sql: true
     properties:
       hibernate:

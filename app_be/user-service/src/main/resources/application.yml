@@ -5,7 +5,7 @@ spring:
   application:
     name: user-service
   datasource:
-    url: jdbc:postgresql://${SUPABASE_HOST:aws-1-ap-southeast-1.pooler.supabase.com}:${SUPABASE_PORT:6543}/postgres
+    url: "jdbc:postgresql://${SUPABASE_HOST:aws-1-ap-southeast-1.pooler.supabase.com}:${SUPABASE_PORT:6543}/postgres?stringtype=unspecified&prepareThreshold=0"
     username: ${SUPABASE_USER:postgres.dslbtevbqmxlmulqxcqk}
     password: ${SUPABASE_PASSWORD:your-password}
     driver-class-name: org.postgresql.Driver
@@ -30,3 +30,8 @@ springdoc:
     path: /api-docs
   swagger-ui:
     path: /swagger-ui.html
+
+supabase:
+  url: https://dslbtevbqmxlmulqxcqk.supabase.co
+  key: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRzbGJ0ZXZicW14bG11bHF4Y3FrIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2Nzg1MjM0MSwiZXhwIjoyMDgzNDI4MzQxfQ.O1NcAHNCEf5JwzhGlFC-YsbEjPOwztrQCu_gByQHPCc
+  bucket: avatars

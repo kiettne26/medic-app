@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:intl/intl.dart';
+import 'package:app_fe/config/router.dart';
+import '../../profile/presentation/user_provider.dart';
+import 'home_controller.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -11,25 +14,13 @@ class HomeScreen extends ConsumerStatefulWidget {
 }
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
-  final FlutterSecureStorage _storage = const FlutterSecureStorage();
-  String _userName = 'Người dùng';
-  String _userAvatar = '';
-
   @override
   void initState() {
     super.initState();
-    _loadUserInfo();
-  }
-
-  Future<void> _loadUserInfo() async {
-    final name = await _storage.read(key: 'user_name');
-    final avatar = await _storage.read(key: 'user_avatar');
-    if (mounted) {
-      setState(() {
-        _userName = name ?? 'Người dùng';
-        _userAvatar = avatar ?? '';
-      });
-    }
+    // Trigger refresh when home initializes
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(userProvider.notifier).refreshProfile();
+    });
   }
 
   String _getGreeting() {
@@ -41,15 +32,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final userState = ref.watch(userProvider);
+    final userName = userState.name;
+    final userAvatar = userState.avatar;
+
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7F8), // background-light
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.only(bottom: 20),
+          padding: const EdgeInsets.only(bottom: 80),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              _buildHeader(),
+              _buildHeader(userName, userAvatar),
               _buildSearchBar(),
               _buildUpcomingScheduleCard(),
               _buildServiceCategoryList(),
@@ -61,7 +56,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeader(String userName, String userAvatar) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Row(
@@ -75,14 +70,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 color: const Color(0xFF297EFF).withOpacity(0.2), // primary/20
                 width: 2,
               ),
-              image: _userAvatar.isNotEmpty
+              image: userAvatar.isNotEmpty
                   ? DecorationImage(
-                      image: NetworkImage(_userAvatar),
+                      image: NetworkImage(userAvatar),
                       fit: BoxFit.cover,
                     )
                   : null,
             ),
-            child: _userAvatar.isEmpty
+            child: userAvatar.isEmpty
                 ? const Icon(Icons.person, color: Color(0xFF297EFF), size: 28)
                 : null,
           ),
@@ -100,7 +95,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   ),
                 ),
                 Text(
-                  '${_getGreeting()}, $_userName!',
+                  '${_getGreeting()}, $userName!',
                   style: const TextStyle(
                     color: Color(0xFF101418),
                     fontSize: 18,
@@ -111,34 +106,37 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               ],
             ),
           ),
-          Stack(
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF0F2F5),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: const Icon(
-                  Icons.notifications_outlined,
-                  color: Color(0xFF101418),
-                ),
-              ),
-              Positioned(
-                top: 10,
-                right: 10,
-                child: Container(
-                  width: 10,
-                  height: 10,
+          GestureDetector(
+            onTap: () => context.pushNamed(AppRoute.notification.name),
+            child: Stack(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
                   decoration: BoxDecoration(
-                    color: Colors.red,
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white, width: 2),
+                    color: const Color(0xFFF0F2F5),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: const Icon(
+                    Icons.notifications_outlined,
+                    color: Color(0xFF101418),
                   ),
                 ),
-              ),
-            ],
+                Positioned(
+                  top: 10,
+                  right: 10,
+                  child: Container(
+                    width: 10,
+                    height: 10,
+                    decoration: BoxDecoration(
+                      color: Colors.red,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 2),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -197,6 +195,72 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   Widget _buildUpcomingScheduleCard() {
+    final homeState = ref.watch(homeControllerProvider);
+    final booking = homeState.upcomingBooking;
+
+    // Nếu không có lịch hẹn sắp tới, hiển thị card mời đặt lịch
+    if (booking == null) {
+      return Padding(
+        padding: const EdgeInsets.all(16),
+        child: Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF0F2F5),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.grey.withOpacity(0.2)),
+          ),
+          child: Column(
+            children: [
+              Icon(Icons.calendar_today, size: 48, color: Colors.grey[400]),
+              const SizedBox(height: 12),
+              const Text(
+                'Chưa có lịch hẹn sắp tới',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF5E718D),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Đặt lịch khám với bác sĩ ngay hôm nay',
+                style: TextStyle(fontSize: 14, color: Colors.grey[500]),
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () => context.push('/doctors'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF297EFF),
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 12,
+                  ),
+                ),
+                child: const Text(
+                  'Đặt lịch ngay',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // Format dữ liệu từ booking
+    String dateStr = 'Chưa xác định';
+    String timeStr = 'Chưa xác định';
+
+    if (booking.timeSlot != null) {
+      final ts = booking.timeSlot!;
+      dateStr = DateFormat('dd \'Th\'MM, yyyy', 'vi').format(ts.date);
+      timeStr = ts.startTime.substring(0, 5);
+    }
+
     return Padding(
       padding: const EdgeInsets.all(16),
       child: Container(
@@ -263,27 +327,30 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   ),
                 ),
                 const SizedBox(width: 16),
-                const Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '15 Th05, 2024',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        dateStr,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                    ),
-                    SizedBox(height: 4),
-                    Text(
-                      '09:00 AM • BS. Trần Viết An',
-                      style: TextStyle(
-                        color: Colors.white70,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
+                      const SizedBox(height: 4),
+                      Text(
+                        timeStr,
+                        style: const TextStyle(
+                          color: Colors.white70,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                        ),
+                        overflow: TextOverflow.ellipsis,
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -292,7 +359,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               children: [
                 Expanded(
                   child: ElevatedButton(
-                    onPressed: () {},
+                    onPressed: () {
+                      // Navigate to booking detail
+                      context.push('/booking');
+                    },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.white,
                       foregroundColor: const Color(0xFF297EFF),
@@ -413,35 +483,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   Widget _buildFeaturedDoctorsList() {
-    final doctors = [
-      {
-        'name': 'BS. Nguyễn Văn A',
-        'specialty': 'Chuyên gia Tim mạch',
-        'rating': 4.9,
-        'reviews': 120,
-        'status': 'Sẵn sàng ngay hôm nay',
-        'image':
-            'https://lh3.googleusercontent.com/aida-public/AB6AXuDoyIsIJyatB1_0E6ySutFFi91vaZKaQ5E-s3eMOVC0zeVtMZvSkTF8MpNK8JnFVvZYmojIDeTa1utgpooP60DGNANPLwRcRmOwN2PRm_yqw1y_MUhLykS46b9vSDvNPqngRIyi_53lluddd8jC_wtnOsAEzNdir-DFwTB514uayReHHOq5xlZveUVSur5-WrRzmrGdcwScEMsxrIOgJ2fD2DS1QJ2Zk4RQUkKE5ipE_N0ttQen-s9XWKVzFQyVbAUVD1fkiyPOhBk',
-      },
-      {
-        'name': 'BS. Lê Thị B',
-        'specialty': 'Chuyên gia Nhi khoa',
-        'rating': 4.8,
-        'reviews': 85,
-        'status': 'Lịch trống ngày mai',
-        'image':
-            'https://lh3.googleusercontent.com/aida-public/AB6AXuDETy1IIeH76dXfaKcB36D9XlRmnmM4TBYGQ6W_hbTJ2gCX7QlZ17CT44G3AZtSVO5Mlow4RTW5qZQRDlkdjviBxTE4d3GanQTzTZ8SqXDkjiQHmJNeuDzQA81jYCj3wKDfIXL2C3TR62vJGZrdotOJGSEBNQwWcfRNAF_MH6QNpnSdGuqknCr5cLX_Yn3v-b_hXTS5BTBNZkACFHv30Is9Evre_Hm6ghnMB88Wdjf4hMzbQUEdywlqTYeaAdvARmBrwc1bg01iuKE',
-      },
-      {
-        'name': 'BS. Phạm Minh C',
-        'specialty': 'Chuyên gia Da liễu',
-        'rating': 5.0,
-        'reviews': 210,
-        'status': 'Sẵn sàng ngay hôm nay',
-        'image':
-            'https://lh3.googleusercontent.com/aida-public/AB6AXuB64WAZsXdZv7yM8-s5H7HxXyqUoLeOI5Gpk6qLbeICEzYdwfykWnXoNqEu8-09EkhYCePcPSlb4iKT-ES6Lmyad6Znbz4M2r0xP5iBwopeHoS-ko4wzVRAClbMcQLE_Bs-qYaOodyz5wEYueWFSjxFNOaWvMvhatYs8dLG5xrm-swEYeuzyrl445mGzed7hIhbeWMktD3CUu5AQ5mWzbquaEZSDNWm8sXDvFJk1kIva954uro-viTEgfW6SFk4dzP84B5a8tD8e3k',
-      },
-    ];
+    final homeState = ref.watch(homeControllerProvider);
+    final doctors = homeState.featuredDoctors;
 
     return Column(
       children: [
@@ -459,7 +502,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 ),
               ),
               TextButton(
-                onPressed: () {},
+                onPressed: () {
+                  context.push('/doctors');
+                },
                 child: const Text(
                   'Xem thêm',
                   style: TextStyle(
@@ -471,132 +516,171 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             ],
           ),
         ),
-        ListView.separated(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          physics: const NeverScrollableScrollPhysics(),
-          shrinkWrap: true,
-          itemCount: doctors.length,
-          separatorBuilder: (_, __) => const SizedBox(height: 12),
-          itemBuilder: (context, index) {
-            final doctor = doctors[index];
-            return Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.grey.withOpacity(0.1)),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.02),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 80,
-                    height: 80,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(12),
-                      image: DecorationImage(
-                        image: NetworkImage(doctor['image'] as String),
-                        fit: BoxFit.cover,
+        if (homeState.isLoading)
+          const Padding(
+            padding: EdgeInsets.all(32),
+            child: CircularProgressIndicator(color: Color(0xFF297EFF)),
+          )
+        else if (doctors.isEmpty)
+          Padding(
+            padding: const EdgeInsets.all(32),
+            child: Text(
+              'Không có bác sĩ khả dụng',
+              style: TextStyle(color: Colors.grey[500]),
+            ),
+          )
+        else
+          ListView.separated(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            physics: const NeverScrollableScrollPhysics(),
+            shrinkWrap: true,
+            itemCount: doctors.length,
+            separatorBuilder: (_, __) => const SizedBox(height: 12),
+            itemBuilder: (context, index) {
+              final doctor = doctors[index];
+              return GestureDetector(
+                onTap: () {
+                  context.push('/doctor/${doctor.id}');
+                },
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Colors.grey.withOpacity(0.1)),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.02),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
                       ),
-                    ),
+                    ],
                   ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          doctor['specialty'] as String,
-                          style: const TextStyle(
-                            color: Color(0xFF297EFF),
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 0.5,
-                          ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 80,
+                        height: 80,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(12),
+                          color: const Color(0xFF297EFF).withOpacity(0.1),
+                          image:
+                              doctor.avatarUrl != null &&
+                                  doctor.avatarUrl!.isNotEmpty
+                              ? DecorationImage(
+                                  image: NetworkImage(doctor.avatarUrl!),
+                                  fit: BoxFit.cover,
+                                )
+                              : null,
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          doctor['name'] as String,
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF101418),
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Row(
+                        child:
+                            doctor.avatarUrl == null ||
+                                doctor.avatarUrl!.isEmpty
+                            ? const Icon(
+                                Icons.person,
+                                size: 40,
+                                color: Color(0xFF297EFF),
+                              )
+                            : null,
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Icon(
-                              Icons.star,
-                              color: Colors.amber,
-                              size: 14,
-                            ),
-                            const SizedBox(width: 4),
                             Text(
-                              '${doctor['rating']}',
+                              doctor.specialty ?? 'Chuyên khoa',
                               style: const TextStyle(
+                                color: Color(0xFF297EFF),
+                                fontSize: 10,
                                 fontWeight: FontWeight.bold,
-                                fontSize: 12,
+                                letterSpacing: 0.5,
                               ),
                             ),
-                            const SizedBox(width: 4),
+                            const SizedBox(height: 4),
                             Text(
-                              '(${doctor['reviews']} đánh giá)',
+                              doctor.fullName ?? 'Bác sĩ',
                               style: const TextStyle(
-                                color: Color(0xFF5E718D),
-                                fontSize: 12,
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF101418),
                               ),
+                            ),
+                            const SizedBox(height: 4),
+                            Row(
+                              children: [
+                                const Icon(
+                                  Icons.star,
+                                  color: Colors.amber,
+                                  size: 14,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  '${doctor.rating?.toStringAsFixed(1) ?? '0.0'}',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  '(${doctor.totalReviews ?? 0} đánh giá)',
+                                  style: const TextStyle(
+                                    color: Color(0xFF5E718D),
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 4),
+                            Row(
+                              children: [
+                                Container(
+                                  width: 8,
+                                  height: 8,
+                                  decoration: BoxDecoration(
+                                    color: doctor.isAvailable == true
+                                        ? const Color(0xFF00C853)
+                                        : Colors.grey,
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  doctor.isAvailable == true
+                                      ? 'Sẵn sàng tư vấn'
+                                      : 'Không khả dụng',
+                                  style: TextStyle(
+                                    color: doctor.isAvailable == true
+                                        ? const Color(0xFF00C853)
+                                        : Colors.grey[500],
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
                             ),
                           ],
                         ),
-                        const SizedBox(height: 4),
-                        Row(
-                          children: [
-                            Container(
-                              width: 8,
-                              height: 8,
-                              decoration: const BoxDecoration(
-                                color: Color(0xFF00C853),
-                                shape: BoxShape.circle,
-                              ),
-                            ),
-                            const SizedBox(width: 6),
-                            Text(
-                              doctor['status'] as String,
-                              style: const TextStyle(
-                                color: Color(0xFF5E718D),
-                                fontSize: 11,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
+                      ),
+                      Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF297EFF).withOpacity(0.1),
+                          shape: BoxShape.circle,
                         ),
-                      ],
-                    ),
+                        child: const Icon(
+                          Icons.chevron_right,
+                          color: Color(0xFF297EFF),
+                        ),
+                      ),
+                    ],
                   ),
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF297EFF).withOpacity(0.1),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.chevron_right,
-                      color: Color(0xFF297EFF),
-                    ),
-                  ),
-                ],
-              ),
-            );
-          },
-        ),
+                ),
+              );
+            },
+          ),
       ],
     );
   }
