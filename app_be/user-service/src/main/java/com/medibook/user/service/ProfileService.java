@@ -35,15 +35,33 @@ public class ProfileService {
      */
     @Transactional
     public ProfileDto updateProfile(UUID userId, UpdateProfileRequest request) {
-        Profile profile = profileRepository.findByUserId(userId)
-                .orElseGet(() -> Profile.builder().userId(userId).build());
+        log.info("Updating profile for userId: {}, Phone: {}", userId, request.getPhone());
+
+        Optional<Profile> existingProfileOpt = profileRepository.findByUserId(userId);
+        Profile profile;
+        if (existingProfileOpt.isPresent()) {
+            profile = existingProfileOpt.get();
+            log.info("Found existing profile with ID: {}", profile.getId());
+        } else {
+            log.info("Profile not found for userId: {}. Creates NEW one.", userId);
+            profile = Profile.builder().userId(userId).build();
+        }
+
+        // Check Unique Phone
+        if (request.getPhone() != null) {
+            Optional<Profile> existingPhone = profileRepository.findByPhone(request.getPhone());
+            if (existingPhone.isPresent() && !existingPhone.get().getUserId().equals(userId)) {
+                // Phone belongs to another user
+                throw new com.medibook.common.exception.BadRequestException(
+                        "Số điện thoại đã được sử dụng bởi tài khoản khác.");
+            }
+            profile.setPhone(request.getPhone());
+        }
 
         if (request.getFullName() != null) {
             profile.setFullName(request.getFullName());
         }
-        if (request.getPhone() != null) {
-            profile.setPhone(request.getPhone());
-        }
+
         if (request.getAvatarUrl() != null) {
             profile.setAvatarUrl(request.getAvatarUrl());
         }
@@ -51,16 +69,30 @@ public class ProfileService {
             profile.setAddress(request.getAddress());
         }
 
-        // Handle gender as String directly
+        // Handle gender mapping (VN -> EN Enum)
         if (request.getGender() != null) {
-            profile.setGender(request.getGender());
+            String genderInput = request.getGender();
+            String genderDbValue;
+            if ("Nam".equalsIgnoreCase(genderInput) || "Male".equalsIgnoreCase(genderInput)) {
+                genderDbValue = "MALE";
+            } else if ("Nữ".equalsIgnoreCase(genderInput) || "Nu".equalsIgnoreCase(genderInput)
+                    || "Female".equalsIgnoreCase(genderInput)) {
+                genderDbValue = "FEMALE";
+            } else {
+                genderDbValue = "OTHER";
+            }
+            profile.setGender(genderDbValue);
         }
 
         if (request.getDob() != null) {
             profile.setDob(request.getDob());
         }
 
-        profile = profileRepository.save(profile);
+        try {
+            profile = profileRepository.save(profile);
+        } catch (org.springframework.dao.DataIntegrityViolationException e) {
+            throw new com.medibook.common.exception.BadRequestException("Lỗi dữ liệu trùng lặp: " + e.getMessage());
+        }
         log.info("Profile updated for user: {}", userId);
         return toDto(profile);
     }

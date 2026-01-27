@@ -203,4 +203,28 @@ public class AuthService {
         }
         return token;
     }
+
+    /**
+     * Đổi mật khẩu
+     */
+    @Transactional
+    public void changePassword(UUID userId, ChangePasswordRequest request) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new UnauthorizedException("User không tồn tại"));
+
+        // Verify old password
+        if (!passwordEncoder.matches(request.getOldPassword(), user.getPasswordHash())) {
+            throw new BadRequestException("Mật khẩu cũ không chính xác");
+        }
+
+        // Validate new password (simple check, validation annotations handle mostly)
+        if (request.getNewPassword().equals(request.getOldPassword())) {
+            throw new BadRequestException("Mật khẩu mới không được trùng với mật khẩu cũ");
+        }
+
+        // Update password
+        user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
+        userRepository.save(user); // Save explicitly although Transactional handles it
+        log.info("Password changed for user: {}", user.getEmail());
+    }
 }

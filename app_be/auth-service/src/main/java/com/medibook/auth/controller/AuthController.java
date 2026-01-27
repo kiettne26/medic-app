@@ -67,4 +67,13 @@ public class AuthController {
     public ResponseEntity<ApiResponse<UUID>> getCurrentUser(@AuthenticationPrincipal UUID userId) {
         return ResponseEntity.ok(ApiResponse.success(userId));
     }
+
+    @PostMapping("/change-password")
+    @Operation(summary = "Đổi mật khẩu")
+    public ResponseEntity<ApiResponse<Void>> changePassword(
+            @AuthenticationPrincipal UUID userId,
+            @Valid @RequestBody ChangePasswordRequest request) {
+        authService.changePassword(userId, request);
+        return ResponseEntity.ok(ApiResponse.success("Đổi mật khẩu thành công", null));
+    }
 }

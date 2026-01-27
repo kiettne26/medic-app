@@ -56,6 +56,14 @@ public class DoctorService {
     }
 
     /**
+     * Lấy bác sĩ theo User ID
+     */
+    public java.util.Optional<DoctorDto> getDoctorByUserId(UUID userId) {
+        return doctorRepository.findByUserId(userId)
+                .map(this::toDto);
+    }
+
+    /**
      * Lấy bác sĩ theo chuyên khoa
      */
     public List<DoctorDto> getDoctorsBySpecialty(String specialty) {

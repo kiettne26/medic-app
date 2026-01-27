@@ -44,6 +44,14 @@ public class DoctorController {
         return ResponseEntity.ok(ApiResponse.success(doctorService.getDoctorById(id)));
     }
 
+    @GetMapping("/user/{userId}")
+    @Operation(summary = "Lấy thông tin bác sĩ theo User ID")
+    public ResponseEntity<ApiResponse<DoctorDto>> getDoctorByUserId(@PathVariable UUID userId) {
+        return doctorService.getDoctorByUserId(userId)
+                .map(doctor -> ResponseEntity.ok(ApiResponse.success(doctor)))
+                .orElse(ResponseEntity.ok(ApiResponse.success(null)));
+    }
+
     @GetMapping("/specialty/{specialty}")
     @Operation(summary = "Lấy bác sĩ theo chuyên khoa")
     public ResponseEntity<ApiResponse<List<DoctorDto>>> getDoctorsBySpecialty(@PathVariable String specialty) {
