@@ -40,4 +40,20 @@ public class TimeSlotController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
         return ResponseEntity.ok(ApiResponse.success(bookingService.generateSlots(doctorId, date)));
     }
+
+    @GetMapping("/doctor/week")
+    @Operation(summary = "Lấy lịch làm việc của bác sĩ theo tuần")
+    public ResponseEntity<ApiResponse<List<TimeSlotDto>>> getDoctorSlotsForWeek(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
+            @RequestHeader(value = "X-User-Id", required = false) String userIdHeader,
+            @RequestHeader(value = "Authorization", required = false) String authorization) {
+        // Lấy doctorId từ token/header (bác sĩ đăng nhập)
+        UUID userId = null;
+        if (userIdHeader != null && !userIdHeader.isEmpty()) {
+            userId = UUID.fromString(userIdHeader);
+        }
+        return ResponseEntity.ok(ApiResponse.success(
+                bookingService.getDoctorSlotsForWeek(userId, startDate, endDate)));
+    }
 }

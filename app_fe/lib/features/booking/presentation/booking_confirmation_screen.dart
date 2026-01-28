@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../data/dto/service_dto.dart';
 import 'booking_controller.dart';
+import 'booking_list_controller.dart';
+import '../../home/presentation/home_controller.dart';
 
 class BookingConfirmationScreen extends ConsumerStatefulWidget {
   final List<ServiceDto> selectedServices;
@@ -34,6 +36,14 @@ class BookingConfirmationScreen extends ConsumerStatefulWidget {
 
 class _BookingConfirmationScreenState
     extends ConsumerState<BookingConfirmationScreen> {
+  final TextEditingController _notesController = TextEditingController();
+
+  @override
+  void dispose() {
+    _notesController.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -52,6 +62,7 @@ class _BookingConfirmationScreenState
                     _buildDoctorInfo(),
                     _buildDateTimeInfo(),
                     _buildServicesInfo(),
+                    _buildNotesInput(),
                     _buildPaymentInfo(),
                     _buildNotice(),
                   ],
@@ -535,6 +546,72 @@ class _BookingConfirmationScreenState
     );
   }
 
+  Widget _buildNotesInput() {
+    return Container(
+      margin: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: Colors.amber.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.sticky_note_2,
+                  color: Colors.amber,
+                  size: 22,
+                ),
+              ),
+              const SizedBox(width: 16),
+              const Text(
+                'Ghi chú cho bác sĩ',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF101418),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          TextField(
+            controller: _notesController,
+            maxLines: 3,
+            decoration: InputDecoration(
+              hintText:
+                  'Nhập triệu chứng, tiền sử bệnh hoặc yêu cầu đặc biệt...',
+              hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
+              filled: true,
+              fillColor: const Color(0xFFF5F7F8),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide.none,
+              ),
+              contentPadding: const EdgeInsets.all(16),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildNotice() {
     return Container(
       margin: const EdgeInsets.all(16),
@@ -673,6 +750,11 @@ class _BookingConfirmationScreenState
   }
 
   Future<void> _confirmBooking() async {
+    // Lấy ghi chú từ text field
+    final notes = _notesController.text.trim().isNotEmpty
+        ? _notesController.text.trim()
+        : null;
+
     // Call API to create booking
     final success = await ref
         .read(bookingControllerProvider.notifier)
@@ -683,9 +765,14 @@ class _BookingConfirmationScreenState
               .first
               .id, // Assuming single service for now
           timeSlotId: widget.timeSlotId,
+          notes: notes,
         );
 
     if (success && mounted) {
+      // Invalidate booking list providers to refresh data
+      ref.invalidate(bookingListControllerProvider);
+      ref.invalidate(homeControllerProvider);
+
       // Show success dialog
       _showSuccessDialog();
     } else if (mounted) {

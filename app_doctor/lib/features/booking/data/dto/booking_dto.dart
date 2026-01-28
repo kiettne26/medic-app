@@ -16,6 +16,7 @@ class BookingDto {
   final DateTime? createdAt;
   final DateTime? updatedAt;
   final String? patientName; // Added for convenience if backend sends it
+  final String? patientAvatar; // Avatar URL of patient
   final String? serviceName; // Added for convenience
 
   BookingDto({
@@ -31,6 +32,7 @@ class BookingDto {
     this.createdAt,
     this.updatedAt,
     this.patientName,
+    this.patientAvatar,
     this.serviceName,
   });
 

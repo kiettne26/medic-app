@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
@@ -6,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:stomp_dart_client/stomp_dart_client.dart';
 
@@ -45,9 +47,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   final TextEditingController _textController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
+  final ImagePicker _imagePicker = ImagePicker();
   StompClient? client;
   String _connectionStatus = 'Connecting...';
   String? _userId; // Store logged-in user ID
+  bool _isUploading = false;
 
   final List<Map<String, dynamic>> _messages = [];
   String? _conversationId;
@@ -83,7 +87,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
     try {
       final url = Uri.parse(
-        'http://localhost:8082/api/chat/conversation?userId=$_userId&doctorId=${widget.doctor.id}',
+        'http://localhost:8080/api/chat/conversation?userId=$_userId&doctorId=${widget.doctor.userId}',
       );
       final response = await http.get(url);
 
@@ -117,7 +121,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
   void _connectWebSocket() {
     // URL logic: Use localhost with ADB reverse tunnel
-    final socketUrl = 'ws://localhost:8082/ws';
+    final socketUrl = 'ws://localhost:8080/ws';
 
     if (mounted) {
       setState(() {
@@ -127,7 +131,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
     client = StompClient(
       config: StompConfig.sockJS(
-        url: 'http://localhost:8082/ws', // Use HTTP for SockJS fallback
+        url: 'http://localhost:8080/ws', // Use HTTP for SockJS fallback
         onConnect: onConnect,
         beforeConnect: () async {
           print('waiting to connect...');
@@ -222,7 +226,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       final message = {
         'content': text,
         'senderId': _userId,
-        'receiverId': widget.doctor.id,
+        'receiverId': widget.doctor.userId,
         'type': 'TEXT',
       };
       try {
@@ -232,6 +236,105 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       }
     }
     _textController.clear();
+  }
+
+  /// Chọn ảnh từ gallery và gửi
+  Future<void> _pickAndSendImage() async {
+    try {
+      final XFile? image = await _imagePicker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 70,
+        maxWidth: 1024,
+      );
+
+      if (image == null) return;
+
+      if (mounted) {
+        setState(() {
+          _isUploading = true;
+        });
+      }
+
+      // Upload ảnh lên server
+      final imageUrl = await _uploadImage(File(image.path));
+
+      if (imageUrl != null) {
+        _sendImageMessage(imageUrl);
+      }
+    } catch (e) {
+      print('Error picking/uploading image: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Không thể gửi ảnh: $e')));
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isUploading = false;
+        });
+      }
+    }
+  }
+
+  /// Upload ảnh lên server và trả về URL
+  Future<String?> _uploadImage(File imageFile) async {
+    try {
+      final uri = Uri.parse('http://localhost:8080/users/upload');
+      final request = http.MultipartRequest('POST', uri);
+
+      request.files.add(
+        await http.MultipartFile.fromPath('file', imageFile.path),
+      );
+
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        return data['data']?['url'];
+      } else {
+        print('Upload failed: ${response.body}');
+        return null;
+      }
+    } catch (e) {
+      print('Error uploading image: $e');
+      return null;
+    }
+  }
+
+  /// Gửi tin nhắn ảnh qua WebSocket
+  void _sendImageMessage(String imageUrl) {
+    // Add message to local list immediately
+    if (mounted) {
+      setState(() {
+        _messages.add({
+          'isMe': true,
+          'text': '',
+          'time': 'Just now',
+          'type': 'IMAGE',
+          'imageUrl': imageUrl,
+          'isRead': false,
+        });
+      });
+      _scrollToBottom();
+    }
+
+    // Send to server if connected
+    if (client != null && _userId != null) {
+      final message = {
+        'content': '',
+        'senderId': _userId,
+        'receiverId': widget.doctor.userId,
+        'type': 'IMAGE',
+        'imageUrl': imageUrl,
+      };
+      try {
+        client!.send(destination: '/app/chat', body: json.encode(message));
+      } catch (e) {
+        print('Error sending image message: $e');
+      }
+    }
   }
 
   @override
@@ -533,6 +636,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
   Widget _buildImageMessage(Map<String, dynamic> msg) {
     final isMe = msg['isMe'] as bool;
+    final hasText = msg['text'] != null && (msg['text'] as String).isNotEmpty;
     return Padding(
       padding: const EdgeInsets.only(bottom: 24),
       child: Row(
@@ -541,27 +645,52 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             : MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
+          if (!isMe) ...[
+            Container(
+              width: 32,
+              height: 32,
+              margin: const EdgeInsets.only(right: 8),
+              decoration: const BoxDecoration(shape: BoxShape.circle),
+              child: ClipOval(
+                child: widget.doctor.avatarUrl != null
+                    ? CachedNetworkImage(
+                        imageUrl: widget.doctor.avatarUrl!,
+                        fit: BoxFit.cover,
+                      )
+                    : const Icon(Icons.person, color: Colors.grey),
+              ),
+            ),
+          ],
           Flexible(
             child: Column(
               crossAxisAlignment: isMe
                   ? CrossAxisAlignment.end
                   : CrossAxisAlignment.start,
               children: [
-                if (msg['text'] != null)
+                if (hasText)
                   Container(
                     margin: const EdgeInsets.only(bottom: 8),
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF297EFF),
-                      borderRadius: const BorderRadius.only(
-                        topLeft: Radius.circular(16),
-                        topRight: Radius.circular(16),
-                        bottomLeft: Radius.circular(16),
-                        bottomRight: Radius.zero,
+                      color: isMe ? const Color(0xFF297EFF) : Colors.white,
+                      borderRadius: BorderRadius.only(
+                        topLeft: const Radius.circular(16),
+                        topRight: const Radius.circular(16),
+                        bottomLeft: isMe
+                            ? const Radius.circular(16)
+                            : Radius.zero,
+                        bottomRight: isMe
+                            ? Radius.zero
+                            : const Radius.circular(16),
                       ),
+                      border: isMe
+                          ? null
+                          : Border.all(color: const Color(0xFFDADFE7)),
                       boxShadow: [
                         BoxShadow(
-                          color: const Color(0xFF297EFF).withOpacity(0.1),
+                          color: isMe
+                              ? const Color(0xFF297EFF).withOpacity(0.1)
+                              : Colors.black.withOpacity(0.05),
                           blurRadius: 4,
                           offset: const Offset(0, 2),
                         ),
@@ -570,7 +699,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                     child: Text(
                       msg['text'],
                       style: GoogleFonts.manrope(
-                        color: Colors.white,
+                        color: isMe ? Colors.white : const Color(0xFF101418),
                         fontSize: 14,
                         height: 1.5,
                       ),
@@ -583,7 +712,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
-                      color: const Color(0xFF297EFF).withOpacity(0.2),
+                      color: isMe
+                          ? const Color(0xFF297EFF).withOpacity(0.2)
+                          : const Color(0xFFDADFE7),
                     ),
                     boxShadow: [
                       BoxShadow(
@@ -595,14 +726,19 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   ),
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(16),
-                    child: CachedNetworkImage(
-                      imageUrl: msg['imageUrl'],
-                      fit: BoxFit.cover,
-                      placeholder: (context, url) =>
-                          Container(color: Colors.grey[200]),
-                      errorWidget: (context, url, error) =>
-                          const Icon(Icons.error),
-                    ),
+                    child: msg['imageUrl'] != null
+                        ? CachedNetworkImage(
+                            imageUrl: msg['imageUrl'],
+                            fit: BoxFit.cover,
+                            placeholder: (context, url) =>
+                                Container(color: Colors.grey[200]),
+                            errorWidget: (context, url, error) =>
+                                const Icon(Icons.error),
+                          )
+                        : Container(
+                            color: Colors.grey[200],
+                            child: const Icon(Icons.image, size: 48),
+                          ),
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -610,7 +746,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      msg['time'],
+                      msg['time'] ?? '',
                       style: GoogleFonts.manrope(
                         fontSize: 10,
                         color: const Color(0xFF5E718D),
@@ -690,9 +826,18 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       ),
       child: Row(
         children: [
-          _buildFooterButton(Icons.add_circle_outline),
+          _buildFooterButton(Icons.add_circle_outline, null),
           const SizedBox(width: 8),
-          _buildFooterButton(Icons.image_outlined),
+          _isUploading
+              ? const SizedBox(
+                  width: 40,
+                  height: 40,
+                  child: Padding(
+                    padding: EdgeInsets.all(8.0),
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                )
+              : _buildFooterButton(Icons.image_outlined, _pickAndSendImage),
           const SizedBox(width: 12),
           Expanded(
             child: Container(
@@ -741,15 +886,18 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     );
   }
 
-  Widget _buildFooterButton(IconData icon) {
-    return Container(
-      width: 40,
-      height: 40,
-      decoration: BoxDecoration(
-        color: Colors.transparent,
-        shape: BoxShape.circle,
+  Widget _buildFooterButton(IconData icon, VoidCallback? onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          color: Colors.transparent,
+          shape: BoxShape.circle,
+        ),
+        child: Icon(icon, color: const Color(0xFF5E718D), size: 24),
       ),
-      child: Icon(icon, color: const Color(0xFF5E718D), size: 24),
     );
   }
 }

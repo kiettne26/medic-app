@@ -34,12 +34,13 @@ public class ChatController {
         // Save to DB
         ChatMessageDto saved = chatService.saveMessage(chatMessage);
 
-        // Publish to topic: /topic/conversation/{conversationId}
+        // Publish to topic: /topic/conversation/{conversationId} for ChatScreen
         messagingTemplate.convertAndSend("/topic/conversation/" + saved.getConversationId(), saved);
 
-        // Ideally:
-        // messagingTemplate.convertAndSendToUser(saved.getReceiverId(),
-        // "/queue/messages", saved);
+        // Publish to receiver's notification topic for MessagesScreen real-time update
+        if (chatMessage.getReceiverId() != null) {
+            messagingTemplate.convertAndSend("/topic/user/" + chatMessage.getReceiverId() + "/notification", saved);
+        }
     }
 
     // HTTP Endpoint for history
@@ -69,6 +70,22 @@ public class ChatController {
             return ResponseEntity.ok(result);
         } catch (Exception e) {
             log.error("Error getting conversation: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    // Get list of conversations for a user
+    @GetMapping("/api/chat/conversations")
+    @ResponseBody
+    public ResponseEntity<?> getConversations(
+            @RequestParam String userId,
+            @RequestParam(defaultValue = "false") boolean isDoctor) {
+        try {
+            UUID userUuid = UUID.fromString(userId);
+            var result = chatService.getConversationsForUser(userUuid, isDoctor);
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            log.error("Error getting conversations: {}", e.getMessage());
             return ResponseEntity.badRequest().body(e.getMessage());
         }
     }

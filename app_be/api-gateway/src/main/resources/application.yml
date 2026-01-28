@@ -27,6 +27,18 @@ spring:
           filters:
             - StripPrefix=1
 
+        # Chat API (no StripPrefix - ChatController uses /api/chat/*)
+        - id: user-service-chat
+          uri: lb://user-service
+          predicates:
+            - Path=/api/chat/**
+
+        # WebSocket for Chat (no StripPrefix)
+        - id: user-service-ws
+          uri: lb://user-service
+          predicates:
+            - Path=/ws/**
+
         # Booking Service
         - id: booking-service
           uri: lb://booking-service

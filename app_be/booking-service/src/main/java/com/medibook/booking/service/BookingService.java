@@ -11,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,7 +22,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
- * 🔐 BOOKING SERVICE - CORE FEATURE
+ * BOOKING SERVICE - CORE FEATURE
  * Xử lý đặt lịch với Transaction và Pessimistic Lock
  * Chống race condition và double booking
  */
@@ -33,9 +34,25 @@ public class BookingService {
     private final BookingRepository bookingRepository;
     private final TimeSlotRepository timeSlotRepository;
     private final BookingStatusHistoryRepository statusHistoryRepository;
+    private final JdbcTemplate jdbcTemplate;
 
     /**
-     * 🔐 ĐẶT LỊCH - CORE FUNCTION với Transaction và Pessimistic Lock
+     * Tìm doctorId từ userId (ID tài khoản)
+     */
+    private UUID findDoctorIdByUserId(UUID userId) {
+        try {
+            return jdbcTemplate.queryForObject(
+                    "SELECT id FROM doctors WHERE user_id = ?",
+                    UUID.class,
+                    userId);
+        } catch (Exception e) {
+            log.error("Could not find doctorId for userId: {}", userId);
+            return null;
+        }
+    }
+
+    /**
+     * ĐẶT LỊCH - CORE FUNCTION với Transaction và Pessimistic Lock
      * 
      * Flow:
      * 1. Bắt đầu transaction với isolation SERIALIZABLE
@@ -49,12 +66,12 @@ public class BookingService {
     public BookingDto createBooking(UUID patientId, CreateBookingRequest request) {
         log.info("Creating booking for patient: {}, slot: {}", patientId, request.getTimeSlotId());
 
-        // 🔐 STEP 1: Lấy slot với PESSIMISTIC LOCK
+        // STEP 1: Lấy slot với PESSIMISTIC LOCK
         // Lock sẽ block tất cả requests khác đang cố truy cập cùng slot
         TimeSlot slot = timeSlotRepository.findByIdWithLock(request.getTimeSlotId())
                 .orElseThrow(() -> new ResourceNotFoundException("TimeSlot", "id", request.getTimeSlotId()));
 
-        // 🔐 STEP 2: Double-check slot còn available không
+        // STEP 2: Double-check slot còn available không
         if (!slot.getIsAvailable()) {
             log.warn("Slot {} already booked, rejecting request from patient {}", slot.getId(), patientId);
             throw new SlotNotAvailableException();
@@ -65,11 +82,11 @@ public class BookingService {
             throw new BadRequestException("TimeSlot không thuộc về bác sĩ đã chọn");
         }
 
-        // 🔐 STEP 3: Đánh dấu slot đã đặt
+        // STEP 3: Đánh dấu slot đã đặt
         slot.setIsAvailable(false);
         timeSlotRepository.save(slot);
 
-        // 🔐 STEP 4: Tạo booking với status PENDING
+        // STEP 4: Tạo booking với status PENDING
         Booking booking = Booking.builder()
                 .patientId(patientId)
                 .doctorId(request.getDoctorId())
@@ -95,11 +112,13 @@ public class BookingService {
      * Xác nhận lịch (Bác sĩ)
      */
     @Transactional
-    public BookingDto confirmBooking(UUID bookingId, UUID doctorId) {
+    public BookingDto confirmBooking(UUID bookingId, UUID userId) {
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new ResourceNotFoundException("Booking", "id", bookingId));
 
-        if (!booking.getDoctorId().equals(doctorId)) {
+        // Ánh xạ userId -> doctorId và kiểm tra quyền
+        UUID doctorId = findDoctorIdByUserId(userId);
+        if (doctorId == null || !booking.getDoctorId().equals(doctorId)) {
             throw new BadRequestException("Bạn không có quyền xác nhận lịch này");
         }
 
@@ -111,9 +130,9 @@ public class BookingService {
         booking.setStatus(BookingStatus.CONFIRMED);
         booking = bookingRepository.save(booking);
 
-        saveStatusHistory(booking, oldStatus, BookingStatus.CONFIRMED, doctorId, "Bác sĩ xác nhận");
+        saveStatusHistory(booking, oldStatus, BookingStatus.CONFIRMED, userId, "Bác sĩ xác nhận");
 
-        log.info("Booking {} confirmed by doctor {}", bookingId, doctorId);
+        log.info("Booking {} confirmed by doctor {}", bookingId, userId);
         return toDto(booking);
     }
 
@@ -121,11 +140,13 @@ public class BookingService {
      * Hoàn thành lịch (Bác sĩ)
      */
     @Transactional
-    public BookingDto completeBooking(UUID bookingId, UUID doctorId, String doctorNotes) {
+    public BookingDto completeBooking(UUID bookingId, UUID userId, String doctorNotes) {
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new ResourceNotFoundException("Booking", "id", bookingId));
 
-        if (!booking.getDoctorId().equals(doctorId)) {
+        // Ánh xạ userId -> doctorId và kiểm tra quyền
+        UUID doctorId = findDoctorIdByUserId(userId);
+        if (doctorId == null || !booking.getDoctorId().equals(doctorId)) {
             throw new BadRequestException("Bạn không có quyền hoàn thành lịch này");
         }
 
@@ -138,9 +159,9 @@ public class BookingService {
         booking.setDoctorNotes(doctorNotes);
         booking = bookingRepository.save(booking);
 
-        saveStatusHistory(booking, oldStatus, BookingStatus.COMPLETED, doctorId, "Hoàn thành khám");
+        saveStatusHistory(booking, oldStatus, BookingStatus.COMPLETED, userId, "Hoàn thành khám");
 
-        log.info("Booking {} completed by doctor {}", bookingId, doctorId);
+        log.info("Booking {} completed by doctor {}", bookingId, userId);
         return toDto(booking);
     }
 
@@ -151,10 +172,9 @@ public class BookingService {
     public BookingDto cancelBooking(UUID bookingId, UUID userId, CancelBookingRequest request) {
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new ResourceNotFoundException("Booking", "id", bookingId));
-
-        // Kiểm tra quyền hủy
         boolean isPatient = booking.getPatientId().equals(userId);
-        boolean isDoctor = booking.getDoctorId().equals(userId);
+        UUID doctorId = findDoctorIdByUserId(userId);
+        boolean isDoctor = (doctorId != null && booking.getDoctorId().equals(doctorId));
 
         if (!isPatient && !isDoctor) {
             throw new BadRequestException("Bạn không có quyền hủy lịch này");
@@ -169,7 +189,7 @@ public class BookingService {
         booking.setCancellationReason(request.getReason());
         booking.setCancelledBy(userId);
 
-        // 🔐 Trả lại slot để người khác có thể đặt
+        // Trả lại slot để người khác có thể đặt
         TimeSlot slot = booking.getTimeSlot();
         slot.setIsAvailable(true);
         timeSlotRepository.save(slot);
@@ -203,7 +223,11 @@ public class BookingService {
     /**
      * Lấy danh sách booking của doctor
      */
-    public Page<BookingDto> getDoctorBookings(UUID doctorId, Pageable pageable) {
+    public Page<BookingDto> getDoctorBookings(UUID userId, Pageable pageable) {
+        UUID doctorId = findDoctorIdByUserId(userId);
+        if (doctorId == null) {
+            return Page.empty();
+        }
         return bookingRepository.findByDoctorIdOrderByCreatedAtDesc(doctorId, pageable)
                 .map(this::toDto);
     }
@@ -211,7 +235,11 @@ public class BookingService {
     /**
      * Lấy booking của doctor trong ngày
      */
-    public List<BookingDto> getDoctorBookingsByDate(UUID doctorId, LocalDate date) {
+    public List<BookingDto> getDoctorBookingsByDate(UUID userId, LocalDate date) {
+        UUID doctorId = findDoctorIdByUserId(userId);
+        if (doctorId == null) {
+            return List.of();
+        }
         return bookingRepository.findByDoctorIdAndDate(doctorId, date).stream()
                 .map(this::toDto)
                 .collect(Collectors.toList());
@@ -224,6 +252,73 @@ public class BookingService {
         return timeSlotRepository.findAvailableSlotsByDoctorAndDate(doctorId, date).stream()
                 .map(this::toSlotDto)
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * Lấy tất cả slots của doctor trong tuần (cho màn hình lịch làm việc)
+     */
+    public List<TimeSlotDto> getDoctorSlotsForWeek(UUID userId, LocalDate startDate, LocalDate endDate) {
+        UUID doctorId = userId != null ? findDoctorIdByUserId(userId) : null;
+        if (doctorId == null) {
+            log.warn("Cannot find doctorId for userId: {}, returning empty list", userId);
+            return List.of();
+        }
+        return timeSlotRepository.findByDoctorIdAndDateBetween(doctorId, startDate, endDate).stream()
+                .map(this::toSlotDto)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Tạo TimeSlot mới cho bác sĩ
+     */
+    @Transactional
+    public TimeSlotDto createTimeSlot(UUID userId, LocalDate date, String startTime, String endTime) {
+        UUID doctorId = userId != null ? findDoctorIdByUserId(userId) : null;
+        if (doctorId == null) {
+            throw new BadRequestException("Doctor not found for user: " + userId);
+        }
+
+        // Validate time format (Assuming HH:mm or HH:mm:ss)
+        if (startTime.length() == 5)
+            startTime += ":00";
+        if (endTime.length() == 5)
+            endTime += ":00";
+
+        TimeSlot slot = new TimeSlot();
+        slot.setDoctorId(doctorId);
+        slot.setDate(date);
+        slot.setStartTime(startTime);
+        slot.setEndTime(endTime);
+        slot.setIsAvailable(true);
+        slot.setCreatedAt(java.time.LocalDateTime.now());
+        slot.setUpdatedAt(java.time.LocalDateTime.now());
+        // Version init handled by DB or set to 0
+        slot.setVersion(0);
+
+        TimeSlot saved = timeSlotRepository.save(slot);
+        return toSlotDto(saved);
+    }
+
+    /**
+     * Xóa TimeSlot
+     */
+    @Transactional
+    public void deleteTimeSlot(UUID slotId, UUID userId) {
+        TimeSlot slot = timeSlotRepository.findById(slotId)
+                .orElseThrow(() -> new ResourceNotFoundException("TimeSlot", "id", slotId));
+
+        // Validate ownership
+        UUID doctorId = userId != null ? findDoctorIdByUserId(userId) : null;
+        if (doctorId == null || !slot.getDoctorId().equals(doctorId)) {
+            throw new BadRequestException("You don't have permission to delete this slot");
+        }
+
+        // Check if booked
+        if (!slot.getIsAvailable()) {
+            throw new BadRequestException("Cannot delete booked slot");
+        }
+
+        timeSlotRepository.delete(slot);
     }
 
     /**
@@ -246,6 +341,37 @@ public class BookingService {
      */
     private BookingDto toDto(Booking booking) {
         TimeSlot slot = booking.getTimeSlot();
+
+        String patientName = null;
+        String patientAvatar = null;
+        String doctorName = null;
+        String doctorAvatar = null;
+        String serviceName = null;
+
+        try {
+            // Get Patient Name & Avatar from profiles table
+            List<java.util.Map<String, Object>> profile = jdbcTemplate.queryForList(
+                    "SELECT full_name, avatar_url FROM profiles WHERE user_id = ?", booking.getPatientId());
+            if (!profile.isEmpty()) {
+                patientName = (String) profile.get(0).get("full_name");
+                patientAvatar = (String) profile.get(0).get("avatar_url");
+            }
+
+            // Get Doctor Name & Avatar from doctors table
+            List<java.util.Map<String, Object>> doctor = jdbcTemplate.queryForList(
+                    "SELECT full_name, avatar_url FROM doctors WHERE id = ?", booking.getDoctorId());
+            if (!doctor.isEmpty()) {
+                doctorName = (String) doctor.get(0).get("full_name");
+                doctorAvatar = (String) doctor.get(0).get("avatar_url");
+            }
+
+            // Get Service Name from medical_services table
+            serviceName = jdbcTemplate.queryForObject(
+                    "SELECT name FROM medical_services WHERE id = ?", String.class, booking.getServiceId());
+        } catch (Exception e) {
+            log.warn("Could not fetch extra info for booking {}: {}", booking.getId(), e.getMessage());
+        }
+
         return BookingDto.builder()
                 .id(booking.getId())
                 .patientId(booking.getPatientId())
@@ -261,8 +387,13 @@ public class BookingService {
                 .notes(booking.getNotes())
                 .doctorNotes(booking.getDoctorNotes())
                 .cancellationReason(booking.getCancellationReason())
-                .createdAt(booking.getCreatedAt())
-                .updatedAt(booking.getUpdatedAt())
+                .patientName(patientName)
+                .patientAvatar(patientAvatar)
+                .doctorName(doctorName)
+                .doctorAvatar(doctorAvatar)
+                .serviceName(serviceName)
+                .createdAt(booking.getCreatedAt() != null ? booking.getCreatedAt() : java.time.LocalDateTime.now())
+                .updatedAt(booking.getUpdatedAt() != null ? booking.getUpdatedAt() : java.time.LocalDateTime.now())
                 .build();
     }
 
@@ -281,7 +412,7 @@ public class BookingService {
     }
 
     /**
-     * 🌱 SEED DATA: Tạo lịch mẫu cho bác sĩ (Dùng cho dev)
+     * SEED DATA: Tạo lịch mẫu cho bác sĩ (Dùng cho dev)
      */
     @Transactional
     public List<TimeSlotDto> generateSlots(UUID doctorId, LocalDate date) {

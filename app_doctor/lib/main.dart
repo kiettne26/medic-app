@@ -2,10 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:app_doctor/config/router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/date_symbol_data_local.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await initializeDateFormatting('vi', null);
   runApp(const ProviderScope(child: DoctorApp()));
 }
+
 // cd app_doctor flutter run -d chrome
 class DoctorApp extends ConsumerWidget {
   const DoctorApp({super.key});
@@ -22,6 +27,13 @@ class DoctorApp extends ConsumerWidget {
         useMaterial3: true,
         textTheme: GoogleFonts.interTextTheme(),
       ),
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [Locale('vi', 'VN'), Locale('en', 'US')],
+      locale: const Locale('vi', 'VN'),
       routerConfig: router,
     );
   }

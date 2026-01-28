@@ -25,6 +25,11 @@ public class BookingDto {
     private String notes;
     private String doctorNotes;
     private String cancellationReason;
+    private String patientName;
+    private String patientAvatar;
+    private String doctorName;
+    private String doctorAvatar;
+    private String serviceName;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 

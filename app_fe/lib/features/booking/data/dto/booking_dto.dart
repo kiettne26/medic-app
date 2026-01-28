@@ -13,6 +13,12 @@ class BookingDto {
   final String? notes;
   final String? doctorNotes;
   final String? cancellationReason;
+  // Thông tin hiển thị (từ Backend)
+  final String? doctorName;
+  final String? doctorAvatarUrl;
+  final String? serviceName;
+  final String? patientName;
+  final String? patientAvatar;
   final DateTime? createdAt;
   final DateTime? updatedAt;
 
@@ -26,6 +32,11 @@ class BookingDto {
     this.notes,
     this.doctorNotes,
     this.cancellationReason,
+    this.doctorName,
+    this.doctorAvatarUrl,
+    this.serviceName,
+    this.patientName,
+    this.patientAvatar,
     this.createdAt,
     this.updatedAt,
   });

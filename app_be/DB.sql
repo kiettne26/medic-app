@@ -7,7 +7,7 @@ create extension if not exists "uuid-ossp";
 -- ENUM TYPES
 -- ==========================
 create type user_role as enum ('ADMIN', 'DOCTOR', 'PATIENT');
-create type booking_status as enum ('PENDING', 'CONFIRMED', 'COMPLETED', 'CANCELLED');
+create type booking_status as enum ('PENDING', 'CONFIRMED', 'COMPLETED', 'CANCELLED', 'CANCELED');
 create type notification_type as enum ('BOOKING', 'SYSTEM', 'REMINDER');
 CREATE TYPE gender_type AS ENUM ('MALE', 'FEMALE', 'OTHER');
 
@@ -107,7 +107,11 @@ create table bookings (
     time_slot_id uuid references time_slots(id),
     status booking_status default 'PENDING',
     notes text,
-    created_at timestamp default now()
+    doctor_notes text,
+    cancellation_reason text,
+    cancelled_by uuid,
+    created_at timestamp default now(),
+    updated_at timestamp default now()
 );
 
 create table booking_status_history (
@@ -116,6 +120,7 @@ create table booking_status_history (
     old_status booking_status,
     new_status booking_status,
     changed_by uuid references users(id),
+    reason text,
     changed_at timestamp default now()
 );
 
@@ -150,4 +155,25 @@ create table audit_logs (
     entity_id uuid,
     details jsonb,
     created_at timestamp default now()
+);
+
+-- Bảng hội thoại (quản lý ai chat với ai)
+CREATE TABLE conversations (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    doctor_id UUID NOT NULL,
+    user_id UUID NOT NULL,
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW(),
+    UNIQUE(doctor_id, user_id) -- Mỗi cặp chỉ có 1 hội thoại
+);
+-- Bảng tin nhắn
+CREATE TABLE messages (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    conversation_id UUID REFERENCES conversations(id),
+    sender_id UUID NOT NULL, -- ID của người gửi (User hoặc Doctor)
+    content TEXT,
+    image_url TEXT,
+    type VARCHAR(20) DEFAULT 'TEXT', -- 'TEXT', 'IMAGE'
+    is_read BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT NOW()
 );

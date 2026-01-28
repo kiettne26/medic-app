@@ -11,11 +11,13 @@ import 'package:app_fe/features/doctor/presentation/doctor_screen.dart';
 import 'package:app_fe/features/doctor/presentation/doctor_detail_screen.dart';
 import 'package:app_fe/features/profile/presentation/edit_profile_screen.dart';
 import 'package:app_fe/features/booking/presentation/booking_screen.dart';
+import 'package:app_fe/features/booking/presentation/booking_detail_screen.dart';
 import 'package:app_fe/features/booking/presentation/select_service_screen.dart';
 import 'package:app_fe/features/booking/presentation/select_datetime_screen.dart';
 import 'package:app_fe/features/booking/presentation/select_doctor_screen.dart';
 import 'package:app_fe/features/booking/presentation/booking_confirmation_screen.dart';
 import 'package:app_fe/features/booking/data/dto/service_dto.dart';
+import 'package:app_fe/features/booking/data/dto/booking_dto.dart';
 import 'package:app_fe/features/settings/presentation/settings_screen.dart';
 import 'package:app_fe/features/notification/presentation/notification_screen.dart';
 import 'package:app_fe/features/chat/presentation/chat_screen.dart';
@@ -28,6 +30,7 @@ enum AppRoute {
   home,
   doctors,
   booking,
+  bookingDetail,
   profile,
   doctorDetail,
   editProfile,
@@ -86,6 +89,15 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/notification',
         name: AppRoute.notification.name,
         builder: (context, state) => const NotificationScreen(),
+      ),
+      // Booking Detail Screen
+      GoRoute(
+        path: '/booking-detail',
+        name: AppRoute.bookingDetail.name,
+        builder: (context, state) {
+          final booking = state.extra as BookingDto;
+          return BookingDetailScreen(booking: booking);
+        },
       ),
       // Select Service Screen (booking flow step 1)
       GoRoute(

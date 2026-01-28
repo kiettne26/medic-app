@@ -3,8 +3,11 @@ package com.medibook.user.service;
 import com.medibook.user.dto.ChatMessageDto;
 import com.medibook.user.entity.Conversation;
 import com.medibook.user.entity.Message;
+import com.medibook.user.entity.Profile;
 import com.medibook.user.repository.ConversationRepository;
+import com.medibook.user.repository.DoctorRepository;
 import com.medibook.user.repository.MessageRepository;
+import com.medibook.user.repository.ProfileRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -22,6 +25,8 @@ public class ChatService {
 
         private final ConversationRepository conversationRepository;
         private final MessageRepository messageRepository;
+        private final ProfileRepository profileRepository;
+        private final DoctorRepository doctorRepository;
 
         @Transactional
         public ChatMessageDto saveMessage(ChatMessageDto dto) {
@@ -74,46 +79,35 @@ public class ChatService {
         }
 
         private Conversation getOrCreateConversation(UUID id1, UUID id2) {
-                // This part assumes we know which one is doctor.
-                // HACK: Check if there is a conversation with this pair.
-                // Since we don't look up roles here, we might need to rely on the fact that
-                // `doctorId` in DB refers to a specific user?
-                // Note: In `Doctor` entity, `userId` is a field. `Conversation.doctorId`
-                // usually refers to `Doctor.id`.
-
-                // Correct logic:
-                // Input: senderId, receiverId. These are likely PRIMARY KEYS of Users table (or
-                // one User, one Doctor).
-                // If our Frontend sends User UIDs, we need to map to Doctor ID if receiver is
-                // Doctor.
-
-                // Let's simplified: We assume frontend sends the Conversation ID if known.
-                // If not, we try to look it up.
-                // Since this is a specialized task, let's just stick to "Create if not exists"
-                // blindly mapping for now.
-                // Or better: pass conversationId.
-
-                // For MVP: Let's query matching `doctorId` and `userId`.
-                // We will TRY both combinations (id1 as doctor, id2 as user) OR (id2 as doctor,
-                // id1 as user).
-
+                // Check both combinations for existing conversation
                 return conversationRepository.findByDoctorIdAndUserId(id1, id2)
                                 .or(() -> conversationRepository.findByDoctorIdAndUserId(id2, id1))
                                 .orElseGet(() -> {
-                                        // Create new. We don't know who is who.
-                                        // IMPORTANT: We need correct mapping.
-                                        // For now, let's assume sender is User, receiver is Doctor (Client side logic).
-                                        // But doctor can reply.
+                                        // Determine who is the doctor by checking DoctorRepository
+                                        // Doctor entity has user_id field referring to users table
+                                        boolean id1IsDoctor = doctorRepository.findByUserId(id1).isPresent();
+                                        boolean id2IsDoctor = doctorRepository.findByUserId(id2).isPresent();
 
-                                        // Fix: We must persist `conversationId` on client side once created.
-                                        // But for first message?
+                                        UUID doctorId;
+                                        UUID userId;
 
-                                        // Let's assume we create one with id1=Doctor, id2=User for now to unblock.
-                                        // Ideally we check User Roles.
+                                        if (id1IsDoctor && !id2IsDoctor) {
+                                                doctorId = id1;
+                                                userId = id2;
+                                        } else if (id2IsDoctor && !id1IsDoctor) {
+                                                doctorId = id2;
+                                                userId = id1;
+                                        } else {
+                                                // Fallback: assume id2 (receiver) is doctor when patient initiates
+                                                log.warn("Could not determine doctor role. Assuming receiver is doctor.");
+                                                doctorId = id2;
+                                                userId = id1;
+                                        }
 
+                                        log.info("Creating conversation: doctorId={}, userId={}", doctorId, userId);
                                         return conversationRepository.save(Conversation.builder()
-                                                        .doctorId(id1)
-                                                        .userId(id2)
+                                                        .doctorId(doctorId)
+                                                        .userId(userId)
                                                         .build());
                                 });
         }
@@ -145,5 +139,61 @@ public class ChatService {
                                 "userId", conversation.getUserId().toString(),
                                 "doctorId", conversation.getDoctorId().toString(),
                                 "messages", messages);
+        }
+
+        public java.util.List<com.medibook.user.dto.ConversationDto> getConversationsForUser(UUID userId,
+                        boolean isDoctor) {
+                java.util.List<Conversation> conversations;
+                if (isDoctor) {
+                        conversations = conversationRepository.findByDoctorId(userId);
+                } else {
+                        conversations = conversationRepository.findByUserId(userId);
+                }
+
+                return conversations.stream().map(conv -> {
+                        // Get last message
+                        var lastMsgOpt = messageRepository.findTopByConversationIdOrderByCreatedAtDesc(conv.getId());
+                        String lastMessage = lastMsgOpt.map(Message::getContent).orElse("");
+                        String lastMessageTime = lastMsgOpt.map(m -> m.getCreatedAt().toString()).orElse("");
+
+                        // Count unread messages (messages not sent by current user and not read)
+                        int unreadCount = messageRepository
+                                        .countByConversationIdAndSenderIdNotAndIsReadFalse(conv.getId(), userId);
+
+                        // Get profile info for the other participant
+                        String patientName = "Bệnh nhân";
+                        String patientAvatar = null;
+                        String doctorName = "Bác sĩ";
+                        String doctorAvatar = null;
+
+                        // Fetch patient profile (userId in conversation)
+                        var patientProfile = profileRepository.findByUserId(conv.getUserId());
+                        if (patientProfile.isPresent()) {
+                                Profile p = patientProfile.get();
+                                patientName = p.getFullName() != null ? p.getFullName() : "Bệnh nhân";
+                                patientAvatar = p.getAvatarUrl();
+                        }
+
+                        // Fetch doctor profile (doctorId in conversation)
+                        var doctorProfile = profileRepository.findByUserId(conv.getDoctorId());
+                        if (doctorProfile.isPresent()) {
+                                Profile d = doctorProfile.get();
+                                doctorName = d.getFullName() != null ? d.getFullName() : "Bác sĩ";
+                                doctorAvatar = d.getAvatarUrl();
+                        }
+
+                        return com.medibook.user.dto.ConversationDto.builder()
+                                        .id(conv.getId().toString())
+                                        .doctorId(conv.getDoctorId().toString())
+                                        .userId(conv.getUserId().toString())
+                                        .patientName(patientName)
+                                        .patientAvatar(patientAvatar)
+                                        .doctorName(doctorName)
+                                        .doctorAvatar(doctorAvatar)
+                                        .lastMessage(lastMessage)
+                                        .lastMessageTime(lastMessageTime)
+                                        .unreadCount(unreadCount)
+                                        .build();
+                }).collect(java.util.stream.Collectors.toList());
         }
 }

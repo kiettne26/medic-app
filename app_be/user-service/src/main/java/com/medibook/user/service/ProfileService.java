@@ -2,7 +2,9 @@ package com.medibook.user.service;
 
 import com.medibook.user.dto.ProfileDto;
 import com.medibook.user.dto.UpdateProfileRequest;
+import com.medibook.user.entity.Doctor;
 import com.medibook.user.entity.Profile;
+import com.medibook.user.repository.DoctorRepository;
 import com.medibook.user.repository.ProfileRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -21,6 +23,7 @@ import java.util.UUID;
 public class ProfileService {
 
     private final ProfileRepository profileRepository;
+    private final DoctorRepository doctorRepository;
 
     /**
      * Lấy profile theo user ID
@@ -94,6 +97,10 @@ public class ProfileService {
             throw new com.medibook.common.exception.BadRequestException("Lỗi dữ liệu trùng lặp: " + e.getMessage());
         }
         log.info("Profile updated for user: {}", userId);
+
+        // Đồng bộ sang bảng doctors nếu user là bác sĩ
+        syncToDoctor(userId, profile);
+
         return toDto(profile);
     }
 
@@ -121,5 +128,32 @@ public class ProfileService {
                     .userId(profile.getUserId())
                     .build();
         }
+    }
+
+    /**
+     * Đồng bộ thông tin từ Profile sang Doctor (nếu user là bác sĩ)
+     */
+    private void syncToDoctor(UUID userId, Profile profile) {
+        doctorRepository.findByUserId(userId).ifPresent(doctor -> {
+            boolean updated = false;
+
+            if (profile.getFullName() != null && !profile.getFullName().equals(doctor.getFullName())) {
+                doctor.setFullName(profile.getFullName());
+                updated = true;
+            }
+            if (profile.getPhone() != null && !profile.getPhone().equals(doctor.getPhone())) {
+                doctor.setPhone(profile.getPhone());
+                updated = true;
+            }
+            if (profile.getAvatarUrl() != null && !profile.getAvatarUrl().equals(doctor.getAvatarUrl())) {
+                doctor.setAvatarUrl(profile.getAvatarUrl());
+                updated = true;
+            }
+
+            if (updated) {
+                doctorRepository.save(doctor);
+                log.info("Doctor info synced from Profile for userId: {}", userId);
+            }
+        });
     }
 }

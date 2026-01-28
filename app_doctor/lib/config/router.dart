@@ -10,6 +10,10 @@ import '../features/chat/presentation/pages/messages_screen.dart';
 import '../features/chat/presentation/pages/chat_screen.dart';
 import '../features/chat/domain/models/conversation.dart';
 import '../features/notification/presentation/pages/notification_screen.dart';
+import '../features/booking/presentation/appointment_screen.dart';
+import '../features/booking/presentation/appointment_detail_screen.dart';
+import '../features/booking/data/dto/booking_dto.dart';
+import '../features/schedule/presentation/schedule_screen.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
@@ -43,8 +47,18 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: '/appointments',
-            builder: (context, state) =>
-                const Center(child: Text('Appointments Screen')),
+            builder: (context, state) => const AppointmentScreen(),
+          ),
+          GoRoute(
+            path: '/appointments/detail',
+            builder: (context, state) {
+              final booking = state.extra as BookingDto;
+              return AppointmentDetailScreen(booking: booking);
+            },
+          ),
+          GoRoute(
+            path: '/schedule',
+            builder: (context, state) => const ScheduleScreen(),
           ),
           GoRoute(
             path: '/patients',

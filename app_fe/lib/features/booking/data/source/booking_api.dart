@@ -31,11 +31,14 @@ class BookingApi {
 
   /// Lấy danh sách bookings của user hiện tại
   Future<List<BookingDto>> getMyBookings() async {
-    final response = await _dio.get('/api/bookings/my');
+    final response = await _dio.get('/api/bookings/patient');
 
-    // Response format: { "success": true, "data": [...] }
-    final data = response.data['data'] as List? ?? [];
-    return data.map((json) => BookingDto.fromJson(json)).toList();
+    // Response format: { "success": true, "data": { "content": [...], ... } }
+    final data = response.data['data'];
+    if (data == null) return [];
+
+    final List content = data['content'] as List? ?? [];
+    return content.map((json) => BookingDto.fromJson(json)).toList();
   }
 }
 

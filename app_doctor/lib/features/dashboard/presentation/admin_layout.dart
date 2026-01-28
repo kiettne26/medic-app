@@ -121,8 +121,8 @@ class AdminLayout extends ConsumerWidget {
                       _SidebarItem(
                         icon: Icons.schedule_outlined,
                         title: 'Lịch làm việc',
-                        isSelected: false,
-                        onTap: () {},
+                        isSelected: currentLocation.startsWith('/schedule'),
+                        onTap: () => context.go('/schedule'),
                       ),
                       const SizedBox(height: 4),
                       _SidebarItem(
