@@ -16,6 +16,9 @@ ScheduleSlotDto _$ScheduleSlotDtoFromJson(Map<String, dynamic> json) =>
       isAvailable: json['isAvailable'] as bool? ?? true,
       slotType: json['slotType'] as String?,
       note: json['note'] as String?,
+      status:
+          $enumDecodeNullable(_$SlotStatusEnumMap, json['status']) ??
+          SlotStatus.PENDING,
       bookingId: json['bookingId'] as String?,
       patientName: json['patientName'] as String?,
       patientAvatar: json['patientAvatar'] as String?,
@@ -33,12 +36,19 @@ Map<String, dynamic> _$ScheduleSlotDtoToJson(ScheduleSlotDto instance) =>
       'isAvailable': instance.isAvailable,
       'slotType': instance.slotType,
       'note': instance.note,
+      'status': _$SlotStatusEnumMap[instance.status]!,
       'bookingId': instance.bookingId,
       'patientName': instance.patientName,
       'patientAvatar': instance.patientAvatar,
       'serviceName': instance.serviceName,
       'bookingStatus': instance.bookingStatus,
     };
+
+const _$SlotStatusEnumMap = {
+  SlotStatus.PENDING: 'PENDING',
+  SlotStatus.APPROVED: 'APPROVED',
+  SlotStatus.REJECTED: 'REJECTED',
+};
 
 CreateScheduleSlotRequest _$CreateScheduleSlotRequestFromJson(
   Map<String, dynamic> json,

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../auth/presentation/auth_controller.dart';
 import 'dashboard_controller.dart';
+import 'widgets/appointment_trend_chart.dart';
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
@@ -103,101 +104,10 @@ class DashboardScreen extends ConsumerWidget {
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Chart Section (Keeping generic for now as we need complex Chart data structure)
+                  // Chart Section - Widget biểu đồ xu hướng lịch hẹn
                   Expanded(
                     flex: 5,
-                    child: Container(
-                      padding: const EdgeInsets.all(24),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: const Color(0xFFE6ECF4)),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                'Xu hướng lịch hẹn',
-                                style: GoogleFonts.manrope(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  color: const Color(0xFF0C131D),
-                                ),
-                              ),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 4,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: const Color(
-                                    0xFF00C853,
-                                  ).withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Text(
-                                  '+12%',
-                                  style: GoogleFonts.manrope(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.bold,
-                                    color: const Color(0xFF00C853),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                          Row(
-                            children: [
-                              Text(
-                                appointments.length.toString(),
-                                style: GoogleFonts.manrope(
-                                  fontSize: 24,
-                                  fontWeight: FontWeight.w800,
-                                  color: const Color(0xFF297EFF),
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                'tổng lịch hẹn',
-                                style: GoogleFonts.manrope(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w500,
-                                  color: Colors.grey,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 32),
-
-                          // Bar Chart Simulation
-                          SizedBox(
-                            height: 200,
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                              crossAxisAlignment: CrossAxisAlignment.end,
-                              children: [
-                                _BarColumn(label: 'T2', heightFactor: 0.6),
-                                _BarColumn(label: 'T3', heightFactor: 0.75),
-                                _BarColumn(
-                                  label: 'T4',
-                                  heightFactor: 0.45,
-                                  isActive: true,
-                                  value: todayAppointments.length.toString(),
-                                ),
-                                _BarColumn(label: 'T5', heightFactor: 0.85),
-                                _BarColumn(label: 'T6', heightFactor: 0.5),
-                                _BarColumn(label: 'T7', heightFactor: 0.3),
-                                _BarColumn(label: 'CN', heightFactor: 0.15),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
+                    child: AppointmentTrendChart(appointments: appointments),
                   ),
 
                   const SizedBox(width: 32),
@@ -471,65 +381,6 @@ class _StatCard extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-class _BarColumn extends StatelessWidget {
-  final String label;
-  final double heightFactor;
-  final bool isActive;
-  final String? value;
-
-  const _BarColumn({
-    required this.label,
-    required this.heightFactor,
-    this.isActive = false,
-    this.value,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.end,
-      children: [
-        if (isActive && value != null)
-          Container(
-            margin: const EdgeInsets.only(bottom: 8),
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-            decoration: BoxDecoration(
-              color: const Color(0xFF0C131D),
-              borderRadius: BorderRadius.circular(4),
-            ),
-            child: Text(
-              '$value Lịch',
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 10,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-        Container(
-          width: 40,
-          height: 150 * heightFactor,
-          decoration: BoxDecoration(
-            color: isActive
-                ? const Color(0xFF297EFF)
-                : const Color(0xFF297EFF).withOpacity(0.2),
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
-          ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          label,
-          style: GoogleFonts.manrope(
-            fontSize: 12,
-            fontWeight: FontWeight.bold,
-            color: isActive ? const Color(0xFF297EFF) : Colors.grey,
-          ),
-        ),
-      ],
     );
   }
 }

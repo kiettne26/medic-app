@@ -64,6 +64,15 @@ public class DoctorService {
     }
 
     /**
+     * Lấy Doctor ID từ User ID
+     */
+    public UUID findDoctorIdByUserId(UUID userId) {
+        return doctorRepository.findByUserId(userId)
+                .map(Doctor::getId)
+                .orElse(null);
+    }
+
+    /**
      * Lấy bác sĩ theo chuyên khoa
      */
     public List<DoctorDto> getDoctorsBySpecialty(String specialty) {

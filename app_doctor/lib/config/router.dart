@@ -14,6 +14,7 @@ import '../features/booking/presentation/appointment_screen.dart';
 import '../features/booking/presentation/appointment_detail_screen.dart';
 import '../features/booking/data/dto/booking_dto.dart';
 import '../features/schedule/presentation/schedule_screen.dart';
+import '../features/review/presentation/review_screen.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
@@ -64,6 +65,10 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: '/patients',
             builder: (context, state) =>
                 const Center(child: Text('Patients Screen')),
+          ),
+          GoRoute(
+            path: '/reviews',
+            builder: (context, state) => const ReviewScreen(),
           ),
           GoRoute(
             path: '/messages',

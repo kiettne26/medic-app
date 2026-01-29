@@ -109,6 +109,13 @@ public class ProfileService {
      */
     private ProfileDto toDto(Profile profile) {
         try {
+            // Fetch specialty from doctor record if exists
+            String specialty = null;
+            Optional<Doctor> doctorOpt = doctorRepository.findByUserId(profile.getUserId());
+            if (doctorOpt.isPresent()) {
+                specialty = doctorOpt.get().getSpecialty();
+            }
+
             return ProfileDto.builder()
                     .id(profile.getId())
                     .userId(profile.getUserId())
@@ -119,6 +126,7 @@ public class ProfileService {
                     // Gender is now String, no need to call .name()
                     .gender(profile.getGender())
                     .dob(profile.getDob())
+                    .specialty(specialty)
                     .build();
         } catch (Exception e) {
             log.error("Error converting profile to DTO: {}", e.getMessage());

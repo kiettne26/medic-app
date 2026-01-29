@@ -1,5 +1,7 @@
 package com.medibook.booking.dto;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
+import com.medibook.common.enums.SlotStatus;
 import lombok.*;
 
 import java.time.LocalDate;
@@ -16,8 +18,18 @@ import java.util.UUID;
 public class TimeSlotDto {
     private UUID id;
     private UUID doctorId;
+
+    @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate date;
+
+    @JsonFormat(pattern = "HH:mm:ss")
     private LocalTime startTime;
+
+    @JsonFormat(pattern = "HH:mm:ss")
     private LocalTime endTime;
+
     private Boolean isAvailable;
+
+    @Builder.Default
+    private SlotStatus status = SlotStatus.PENDING;
 }

@@ -246,10 +246,10 @@ public class BookingService {
     }
 
     /**
-     * Lấy slot trống của doctor trong ngày
+     * Lấy slot trống của doctor trong ngày (cho bệnh nhân - chỉ slot APPROVED)
      */
     public List<TimeSlotDto> getAvailableSlots(UUID doctorId, LocalDate date) {
-        return timeSlotRepository.findAvailableSlotsByDoctorAndDate(doctorId, date).stream()
+        return timeSlotRepository.findApprovedAvailableSlotsByDoctorAndDate(doctorId, date).stream()
                 .map(this::toSlotDto)
                 .collect(Collectors.toList());
     }
@@ -284,16 +284,40 @@ public class BookingService {
         if (endTime.length() == 5)
             endTime += ":00";
 
+        java.time.LocalTime start = java.time.LocalTime.parse(startTime);
+        java.time.LocalTime end = java.time.LocalTime.parse(endTime);
+
+        // Validation 1: Time range (07:00-17:00)
+        java.time.LocalTime minTime = java.time.LocalTime.of(7, 0);
+        java.time.LocalTime maxTime = java.time.LocalTime.of(17, 0);
+        if (start.isBefore(minTime) || end.isAfter(maxTime)) {
+            throw new BadRequestException("Khung giờ phải trong khoảng 07:00 - 17:00");
+        }
+
+        // Validation 2: End time must be after start time
+        if (!end.isAfter(start)) {
+            throw new BadRequestException("Giờ kết thúc phải sau giờ bắt đầu");
+        }
+
+        // Validation 3: Check for overlapping slots
+        List<TimeSlot> existingSlots = timeSlotRepository.findByDoctorIdAndDateBetween(doctorId, date, date);
+        for (TimeSlot existing : existingSlots) {
+            // Check if time ranges overlap
+            if (start.isBefore(existing.getEndTime()) && end.isAfter(existing.getStartTime())) {
+                throw new BadRequestException("Khung giờ bị trùng với khung giờ đã có");
+            }
+        }
+
         TimeSlot slot = new TimeSlot();
         slot.setDoctorId(doctorId);
         slot.setDate(date);
-        slot.setStartTime(startTime);
-        slot.setEndTime(endTime);
+        slot.setStartTime(start);
+        slot.setEndTime(end);
         slot.setIsAvailable(true);
         slot.setCreatedAt(java.time.LocalDateTime.now());
         slot.setUpdatedAt(java.time.LocalDateTime.now());
         // Version init handled by DB or set to 0
-        slot.setVersion(0);
+        slot.setVersion(0L);
 
         TimeSlot saved = timeSlotRepository.save(slot);
         return toSlotDto(saved);
@@ -408,6 +432,7 @@ public class BookingService {
                 .startTime(slot.getStartTime())
                 .endTime(slot.getEndTime())
                 .isAvailable(slot.getIsAvailable())
+                .status(slot.getStatus())
                 .build();
     }
 
@@ -433,5 +458,60 @@ public class BookingService {
 
         slots = timeSlotRepository.saveAll(slots);
         return slots.stream().map(this::toSlotDto).collect(Collectors.toList());
+    }
+
+    /**
+     * SEED DATA: Tạo lịch mẫu cho bác sĩ sử dụng userId (account ID)
+     */
+    @Transactional
+    public List<TimeSlotDto> generateSlotsForUser(UUID userId, LocalDate date) {
+        UUID doctorId = findDoctorIdByUserId(userId);
+        if (doctorId == null) {
+            log.warn("Cannot find doctorId for userId: {}", userId);
+            return List.of();
+        }
+        return generateSlots(doctorId, date);
+    }
+
+    // ==================== ADMIN APPROVAL WORKFLOW ====================
+
+    /**
+     * Lấy danh sách slots đang chờ duyệt (Admin)
+     */
+    public List<TimeSlotDto> getPendingSlots() {
+        return timeSlotRepository.findByStatus(com.medibook.common.enums.SlotStatus.PENDING)
+                .stream()
+                .map(this::toSlotDto)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Duyệt slot (Admin)
+     */
+    @Transactional
+    public TimeSlotDto approveSlot(UUID slotId) {
+        TimeSlot slot = timeSlotRepository.findById(slotId)
+                .orElseThrow(() -> new ResourceNotFoundException("TimeSlot", "id", slotId));
+
+        slot.setStatus(com.medibook.common.enums.SlotStatus.APPROVED);
+        slot = timeSlotRepository.save(slot);
+
+        log.info("Slot {} approved", slotId);
+        return toSlotDto(slot);
+    }
+
+    /**
+     * Từ chối slot (Admin)
+     */
+    @Transactional
+    public TimeSlotDto rejectSlot(UUID slotId) {
+        TimeSlot slot = timeSlotRepository.findById(slotId)
+                .orElseThrow(() -> new ResourceNotFoundException("TimeSlot", "id", slotId));
+
+        slot.setStatus(com.medibook.common.enums.SlotStatus.REJECTED);
+        slot = timeSlotRepository.save(slot);
+
+        log.info("Slot {} rejected", slotId);
+        return toSlotDto(slot);
     }
 }

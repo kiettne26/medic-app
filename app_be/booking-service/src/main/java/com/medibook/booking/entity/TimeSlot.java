@@ -1,10 +1,13 @@
 package com.medibook.booking.entity;
 
+import com.medibook.common.enums.SlotStatus;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.UUID;
 
@@ -15,7 +18,8 @@ import java.util.UUID;
 @Entity
 @Table(name = "time_slots", indexes = {
         @Index(name = "idx_time_slots_doctor_date", columnList = "doctor_id, date"),
-        @Index(name = "idx_time_slots_available", columnList = "is_available")
+        @Index(name = "idx_time_slots_available", columnList = "is_available"),
+        @Index(name = "idx_time_slots_status", columnList = "status")
 })
 @Data
 @Builder
@@ -46,9 +50,18 @@ public class TimeSlot {
     @Builder.Default
     private Boolean isAvailable = true;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", nullable = false)
+    @Builder.Default
+    private SlotStatus status = SlotStatus.PENDING;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
-    private java.time.LocalDateTime createdAt;
+    private LocalDateTime createdAt;
+
+    @UpdateTimestamp
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
 
     @Version
     private Long version; // Optimistic locking fallback

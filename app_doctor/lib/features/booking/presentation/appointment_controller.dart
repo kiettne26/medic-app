@@ -8,15 +8,15 @@ class AppointmentState {
   final bool isLoading;
   final String? error;
   final String? selectedStatus; // Filter: null = all
-  final DateTime? selectedDate; // Filter by date: null = all
+  final DateTime selectedDate; // Filter by date: defaults to today
 
-  const AppointmentState({
+  AppointmentState({
     this.appointments = const [],
     this.isLoading = false,
     this.error,
     this.selectedStatus,
-    this.selectedDate,
-  });
+    DateTime? selectedDate,
+  }) : selectedDate = selectedDate ?? DateTime.now();
 
   AppointmentState copyWith({
     List<BookingDto>? appointments,
@@ -48,16 +48,14 @@ class AppointmentState {
       result = result.where((a) => a.status == selectedStatus).toList();
     }
 
-    // Filter by date
-    if (selectedDate != null) {
-      result = result.where((a) {
-        if (a.timeSlot?.date == null) return false;
-        final bookingDate = a.timeSlot!.date;
-        return bookingDate.year == selectedDate!.year &&
-            bookingDate.month == selectedDate!.month &&
-            bookingDate.day == selectedDate!.day;
-      }).toList();
-    }
+    // Filter by date (always filter since selectedDate defaults to today)
+    result = result.where((a) {
+      if (a.timeSlot?.date == null) return false;
+      final bookingDate = a.timeSlot!.date;
+      return bookingDate.year == selectedDate.year &&
+          bookingDate.month == selectedDate.month &&
+          bookingDate.day == selectedDate.day;
+    }).toList();
 
     return result;
   }
@@ -67,7 +65,7 @@ class AppointmentState {
 class AppointmentController extends StateNotifier<AppointmentState> {
   final AppointmentRepository _repository;
 
-  AppointmentController(this._repository) : super(const AppointmentState()) {
+  AppointmentController(this._repository) : super(AppointmentState()) {
     loadAppointments();
   }
 

@@ -93,8 +93,15 @@ create table time_slots (
     date date not null,
     start_time time not null,
     end_time time not null,
-    is_available boolean default true
+    is_available boolean default true,
+    status varchar(20) not null default 'PENDING',  -- PENDING, APPROVED, REJECTED
+    created_at timestamp default now(),
+    updated_at timestamp with time zone,
+    version bigint default 0
 );
+
+-- Index cho status (admin queries)
+create index idx_time_slots_status on time_slots(status);
 
 -- ==========================
 -- BOOKING (CORE)
@@ -134,6 +141,8 @@ create table reviews (
     doctor_id uuid references doctors(id),
     rating int check (rating between 1 and 5),
     comment text,
+    doctor_reply text,
+    doctor_reply_at timestamp,
     created_at timestamp default now()
 );
 

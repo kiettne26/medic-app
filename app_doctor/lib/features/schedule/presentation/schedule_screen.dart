@@ -412,7 +412,7 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
       child: GestureDetector(
         onTap: () => _showSlotDetails(slot),
         child: Container(
-          padding: const EdgeInsets.all(8),
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
           decoration: BoxDecoration(
             color: color.withOpacity(0.1),
             borderRadius: const BorderRadius.only(
@@ -421,51 +421,83 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
             ),
             border: Border(left: BorderSide(color: color, width: 4)),
           ),
+          clipBehavior: Clip.hardEdge,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
             children: [
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    isBooked ? 'Đã đặt lịch' : (slot.slotType ?? 'Ca khám'),
-                    style: GoogleFonts.manrope(
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                      color: color,
+                  Flexible(
+                    child: Text(
+                      isBooked ? 'Đã đặt lịch' : (slot.slotType ?? 'Ca khám'),
+                      style: GoogleFonts.manrope(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        color: color,
+                      ),
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                  Icon(
-                    isBooked ? Icons.visibility : Icons.edit,
-                    size: 14,
-                    color: color,
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Status badge
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 4,
+                          vertical: 1,
+                        ),
+                        decoration: BoxDecoration(
+                          color: _getStatusColor(slot.status).withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          slot.statusText,
+                          style: GoogleFonts.manrope(
+                            fontSize: 7,
+                            fontWeight: FontWeight.bold,
+                            color: _getStatusColor(slot.status),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Icon(
+                        isBooked ? Icons.visibility : Icons.edit,
+                        size: 12,
+                        color: color,
+                      ),
+                    ],
                   ),
                 ],
               ),
-              const SizedBox(height: 4),
               if (isBooked && slot.patientName != null)
-                Text(
-                  'BN. ${slot.patientName}',
-                  style: GoogleFonts.manrope(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
+                Flexible(
+                  child: Text(
+                    'BN. ${slot.patientName}',
+                    style: GoogleFonts.manrope(
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  overflow: TextOverflow.ellipsis,
                 )
               else if (slot.note != null)
-                Text(
-                  slot.note!,
-                  style: GoogleFonts.manrope(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
+                Flexible(
+                  child: Text(
+                    slot.note!,
+                    style: GoogleFonts.manrope(
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  overflow: TextOverflow.ellipsis,
                 ),
-              const SizedBox(height: 4),
               Text(
                 '${slot.startTime.substring(0, 5)} - ${slot.endTime.substring(0, 5)}',
                 style: GoogleFonts.manrope(
-                  fontSize: 10,
+                  fontSize: 9,
                   color: const Color(0xFF5E718D),
                 ),
               ),
@@ -504,15 +536,35 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
           if (slot.bookingId == null)
             TextButton(
               onPressed: () async {
+                // Check if slot is booked (extra validation)
+                if (slot.bookingId != null) {
+                  Navigator.pop(ctx);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Không thể xóa slot đã có lịch hẹn'),
+                      backgroundColor: dangerColor,
+                    ),
+                  );
+                  return;
+                }
                 Navigator.pop(ctx);
                 final success = await ref
                     .read(scheduleControllerProvider.notifier)
                     .deleteSlot(slot.id);
-                if (mounted && success) {
+                if (mounted) {
+                  final state = ref.read(scheduleControllerProvider);
+                  String errorMsg = state.error ?? 'Không thể xóa khung giờ';
+                  // Parse error message for better UX
+                  if (errorMsg.contains('booked slot') ||
+                      errorMsg.contains(
+                        'InvalidDataAccessResourceUsageException',
+                      )) {
+                    errorMsg = 'Không thể xóa slot đã có lịch hẹn';
+                  }
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Đã xóa khung giờ'),
-                      backgroundColor: successColor,
+                    SnackBar(
+                      content: Text(success ? 'Đã xóa khung giờ' : errorMsg),
+                      backgroundColor: success ? successColor : dangerColor,
                     ),
                   );
                 }
@@ -556,6 +608,18 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
         ],
       ),
     );
+  }
+
+  /// Lấy màu theo trạng thái slot
+  Color _getStatusColor(SlotStatus status) {
+    switch (status) {
+      case SlotStatus.PENDING:
+        return const Color(0xFFF59E0B); // Vàng
+      case SlotStatus.APPROVED:
+        return successColor; // Xanh
+      case SlotStatus.REJECTED:
+        return dangerColor; // Đỏ
+    }
   }
 
   void _showAddSlotDialog() {
@@ -698,6 +762,61 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
             ),
             ElevatedButton(
               onPressed: () async {
+                // Validation 1: Check time range (07:00-17:00)
+                const minHour = 7;
+                const maxHour = 17;
+                if (startTime.hour < minHour ||
+                    startTime.hour >= maxHour ||
+                    endTime.hour < minHour ||
+                    endTime.hour > maxHour) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text(
+                        'Khung giờ phải trong khoảng 07:00 - 17:00',
+                      ),
+                      backgroundColor: dangerColor,
+                    ),
+                  );
+                  return;
+                }
+
+                // Validation 2: End time must be after start time
+                final startMinutes = startTime.hour * 60 + startTime.minute;
+                final endMinutes = endTime.hour * 60 + endTime.minute;
+                if (endMinutes <= startMinutes) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Giờ kết thúc phải sau giờ bắt đầu'),
+                      backgroundColor: dangerColor,
+                    ),
+                  );
+                  return;
+                }
+
+                // Validation 3: Check for overlapping slots
+                final state = ref.read(scheduleControllerProvider);
+                final slotsOnDay = state.slotsForDay(selectedDate);
+                final hasOverlap = slotsOnDay.any((slot) {
+                  final slotStart =
+                      int.parse(slot.startTime.split(':')[0]) * 60 +
+                      int.parse(slot.startTime.split(':')[1]);
+                  final slotEnd =
+                      int.parse(slot.endTime.split(':')[0]) * 60 +
+                      int.parse(slot.endTime.split(':')[1]);
+                  // Check if ranges overlap
+                  return startMinutes < slotEnd && endMinutes > slotStart;
+                });
+
+                if (hasOverlap) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Khung giờ bị trùng với khung giờ đã có'),
+                      backgroundColor: dangerColor,
+                    ),
+                  );
+                  return;
+                }
+
                 Navigator.pop(ctx);
                 final request = CreateScheduleSlotRequest(
                   date: selectedDate,

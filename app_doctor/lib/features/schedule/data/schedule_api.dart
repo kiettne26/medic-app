@@ -17,7 +17,7 @@ class ScheduleApi {
   }) async {
     try {
       final response = await _dio.get(
-        '/slots/doctor/week',
+        '/api/slots/doctor/week',
         queryParameters: {
           'startDate': DateFormat('yyyy-MM-dd').format(startDate),
           'endDate': DateFormat('yyyy-MM-dd').format(endDate),
@@ -30,9 +30,21 @@ class ScheduleApi {
       }
       return [];
     } on DioException catch (e) {
-      throw Exception(
-        e.response?.data?['message'] ?? 'Không thể tải lịch làm việc',
+      // Log chi tiết lỗi để debug
+      print(
+        '[ScheduleApi] DioException: ${e.type}, Status: ${e.response?.statusCode}, Message: ${e.message}',
       );
+      print('[ScheduleApi] Response data: ${e.response?.data}');
+
+      final statusCode = e.response?.statusCode;
+      final serverMessage = e.response?.data?['message'];
+      final errorMsg =
+          serverMessage ??
+          (statusCode != null
+              ? 'Lỗi server ($statusCode)'
+              : 'Không thể kết nối đến server');
+
+      throw Exception(errorMsg);
     }
   }
 
@@ -42,7 +54,7 @@ class ScheduleApi {
   ) async {
     try {
       final response = await _dio.post(
-        '/slots',
+        '/api/slots',
         data: {
           'date': DateFormat('yyyy-MM-dd').format(request.date),
           'startTime': request.startTime,
@@ -61,7 +73,7 @@ class ScheduleApi {
   /// Xóa time slot
   Future<void> deleteTimeSlot(String slotId) async {
     try {
-      await _dio.delete('/slots/$slotId');
+      await _dio.delete('/api/slots/$slotId');
     } on DioException catch (e) {
       throw Exception(
         e.response?.data?['message'] ?? 'Không thể xóa khung giờ',

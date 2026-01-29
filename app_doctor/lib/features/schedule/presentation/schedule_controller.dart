@@ -45,11 +45,14 @@ class ScheduleState {
 
   /// Lọc slots theo ngày
   List<ScheduleSlotDto> slotsForDay(DateTime day) {
-    return slots.where((s) {
-      return s.date.year == day.year &&
+    final filtered = slots.where((s) {
+      final match =
+          s.date.year == day.year &&
           s.date.month == day.month &&
           s.date.day == day.day;
+      return match;
     }).toList();
+    return filtered;
   }
 }
 

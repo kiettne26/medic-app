@@ -7,6 +7,7 @@ class ProfileDto {
   final String? address;
   final String? gender;
   final String? dob;
+  final String? specialty; // Chuyên khoa (nếu là bác sĩ)
 
   ProfileDto({
     required this.id,
@@ -17,6 +18,7 @@ class ProfileDto {
     this.address,
     this.gender,
     this.dob,
+    this.specialty,
   });
 
   factory ProfileDto.fromJson(Map<String, dynamic> json) {
@@ -29,6 +31,7 @@ class ProfileDto {
       address: json['address'],
       gender: json['gender'],
       dob: json['dob'],
+      specialty: json['specialty'],
     );
   }
 
@@ -42,6 +45,7 @@ class ProfileDto {
       'address': address,
       'gender': gender,
       'dob': dob,
+      'specialty': specialty,
     };
   }
 
@@ -54,6 +58,7 @@ class ProfileDto {
     String? address,
     String? gender,
     String? dob,
+    String? specialty,
   }) {
     return ProfileDto(
       id: id ?? this.id,
@@ -64,6 +69,7 @@ class ProfileDto {
       address: address ?? this.address,
       gender: gender ?? this.gender,
       dob: dob ?? this.dob,
+      specialty: specialty ?? this.specialty,
     );
   }
 }

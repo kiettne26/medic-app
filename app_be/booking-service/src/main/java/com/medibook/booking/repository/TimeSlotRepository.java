@@ -1,6 +1,7 @@
 package com.medibook.booking.repository;
 
 import com.medibook.booking.entity.TimeSlot;
+import com.medibook.common.enums.SlotStatus;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
@@ -50,4 +51,17 @@ public interface TimeSlotRepository extends JpaRepository<TimeSlot, UUID> {
      */
     @Query("SELECT COUNT(t) FROM TimeSlot t WHERE t.doctorId = :doctorId AND t.date = :date AND t.isAvailable = true")
     long countAvailableSlots(@Param("doctorId") UUID doctorId, @Param("date") LocalDate date);
+
+    /**
+     * Lấy slots theo trạng thái (Admin)
+     */
+    List<TimeSlot> findByStatus(SlotStatus status);
+
+    /**
+     * Lấy slots ĐÃ DUYỆT của bác sĩ - dùng cho bệnh nhân
+     */
+    @Query("SELECT t FROM TimeSlot t WHERE t.doctorId = :doctorId AND t.date = :date " +
+            "AND t.isAvailable = true AND t.status = 'APPROVED' ORDER BY t.startTime")
+    List<TimeSlot> findApprovedAvailableSlotsByDoctorAndDate(@Param("doctorId") UUID doctorId,
+            @Param("date") LocalDate date);
 }

@@ -2,6 +2,9 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'schedule_dto.g.dart';
 
+/// Trạng thái phê duyệt slot
+enum SlotStatus { PENDING, APPROVED, REJECTED }
+
 /// DTO cho một khung giờ làm việc của bác sĩ
 @JsonSerializable()
 class ScheduleSlotDto {
@@ -13,6 +16,7 @@ class ScheduleSlotDto {
   final bool isAvailable;
   final String? slotType; // Ca sáng, Ca chiều, etc.
   final String? note;
+  final SlotStatus status; // Trạng thái phê duyệt
 
   // Booking info if slot is booked
   final String? bookingId;
@@ -30,6 +34,7 @@ class ScheduleSlotDto {
     this.isAvailable = true,
     this.slotType,
     this.note,
+    this.status = SlotStatus.PENDING,
     this.bookingId,
     this.patientName,
     this.patientAvatar,
@@ -56,6 +61,18 @@ class ScheduleSlotDto {
 
   /// Thời lượng slot tính bằng phút
   int get durationMinutes => endMinutes - startMinutes;
+
+  /// Helper để lấy tên trạng thái tiếng Việt
+  String get statusText {
+    switch (status) {
+      case SlotStatus.PENDING:
+        return 'Chờ duyệt';
+      case SlotStatus.APPROVED:
+        return 'Đã duyệt';
+      case SlotStatus.REJECTED:
+        return 'Từ chối';
+    }
+  }
 }
 
 /// Request tạo khung giờ mới

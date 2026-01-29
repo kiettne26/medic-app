@@ -20,5 +20,7 @@ public class ReviewDto {
     private String patientAvatar;
     private Integer rating;
     private String comment;
+    private String doctorReply;
+    private LocalDateTime doctorReplyAt;
     private LocalDateTime createdAt;
 }

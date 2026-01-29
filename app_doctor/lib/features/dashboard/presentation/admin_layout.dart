@@ -83,7 +83,9 @@ class AdminLayout extends ConsumerWidget {
                                   overflow: TextOverflow.ellipsis,
                                 ),
                                 Text(
-                                  'Chuyên khoa Nội', // Can fetch specialization if added to DTO
+                                  profile?.specialty != null
+                                      ? 'Chuyên khoa ${profile!.specialty}'
+                                      : 'Bác sĩ',
                                   style: GoogleFonts.manrope(
                                     fontSize: 12,
                                     fontWeight: FontWeight.w500,
@@ -128,8 +130,8 @@ class AdminLayout extends ConsumerWidget {
                       _SidebarItem(
                         icon: Icons.star_outline,
                         title: 'Đánh giá',
-                        isSelected: false,
-                        onTap: () {},
+                        isSelected: currentLocation.startsWith('/reviews'),
+                        onTap: () => context.go('/reviews'),
                       ),
                       const SizedBox(height: 4),
                       _SidebarItem(
