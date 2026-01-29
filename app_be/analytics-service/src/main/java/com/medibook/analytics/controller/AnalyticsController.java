@@ -1,6 +1,7 @@
 package com.medibook.analytics.controller;
 
 import com.medibook.analytics.dto.DashboardDto;
+import com.medibook.analytics.service.AnalyticsService;
 import com.medibook.common.dto.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -22,49 +23,12 @@ import java.util.UUID;
 @Tag(name = "Analytics", description = "API thống kê và dashboard")
 public class AnalyticsController {
 
+    private final AnalyticsService analyticsService;
+
     @GetMapping("/dashboard")
     @Operation(summary = "Lấy thống kê tổng quan cho dashboard")
     public ResponseEntity<ApiResponse<DashboardDto>> getDashboard() {
-        // TODO: Implement với actual data từ database
-        DashboardDto dashboard = DashboardDto.builder()
-                .totalBookings(100)
-                .totalDoctors(15)
-                .totalPatients(80)
-                .todayBookings(5)
-                .pendingBookings(10)
-                .confirmedBookings(20)
-                .completedBookings(65)
-                .cancelledBookings(5)
-                .bookingsByDay(List.of(
-                        DashboardDto.TimeSeriesData.builder().label("Mon").count(15).build(),
-                        DashboardDto.TimeSeriesData.builder().label("Tue").count(20).build(),
-                        DashboardDto.TimeSeriesData.builder().label("Wed").count(18).build(),
-                        DashboardDto.TimeSeriesData.builder().label("Thu").count(22).build(),
-                        DashboardDto.TimeSeriesData.builder().label("Fri").count(25).build()))
-                .topDoctors(List.of(
-                        DashboardDto.DoctorStats.builder()
-                                .doctorId("1")
-                                .doctorName("Dr. Nguyễn Văn A")
-                                .specialty("Nội khoa")
-                                .totalBookings(50)
-                                .completedBookings(45)
-                                .rating(4.8)
-                                .build()))
-                .popularServices(List.of(
-                        DashboardDto.ServiceStats.builder()
-                                .serviceId("1")
-                                .serviceName("Khám tổng quát")
-                                .bookingCount(40)
-                                .percentage(40.0)
-                                .build(),
-                        DashboardDto.ServiceStats.builder()
-                                .serviceId("2")
-                                .serviceName("Tư vấn dinh dưỡng")
-                                .bookingCount(30)
-                                .percentage(30.0)
-                                .build()))
-                .build();
-
+        DashboardDto dashboard = analyticsService.getDashboardStats();
         return ResponseEntity.ok(ApiResponse.success(dashboard));
     }
 
