@@ -1,73 +1,26 @@
+import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../core/api/api_client.dart';
-import '../data/dto/dashboard_dto.dart';
+import '../../dashboard/data/dto/dashboard_dto.dart';
+import '../../dashboard/data/stats_api.dart';
 
-/// State cho Dashboard
-class DashboardState {
-  final bool isLoading;
-  final String? errorMessage;
-  final DashboardDto? data;
-  final DateTime? lastUpdated;
+final statsControllerProvider =
+    AsyncNotifierProvider<StatsController, DashboardDto>(() {
+      return StatsController();
+    });
 
-  DashboardState({
-    this.isLoading = false,
-    this.errorMessage,
-    this.data,
-    this.lastUpdated,
-  });
-
-  DashboardState copyWith({
-    bool? isLoading,
-    String? errorMessage,
-    DashboardDto? data,
-    DateTime? lastUpdated,
-  }) {
-    return DashboardState(
-      isLoading: isLoading ?? this.isLoading,
-      errorMessage: errorMessage,
-      data: data ?? this.data,
-      lastUpdated: lastUpdated ?? this.lastUpdated,
-    );
-  }
-}
-
-/// Controller cho Dashboard
-class DashboardController extends StateNotifier<DashboardState> {
-  final ApiClient _apiClient;
-
-  DashboardController(this._apiClient) : super(DashboardState());
-
-  /// Load dashboard data
-  Future<void> loadDashboard() async {
-    state = state.copyWith(isLoading: true, errorMessage: null);
-
-    try {
-      final response = await _apiClient.get('/analytics/dashboard');
-      final data = response.data['data'];
-      final dashboard = DashboardDto.fromJson(data);
-
-      state = state.copyWith(
-        isLoading: false,
-        data: dashboard,
-        lastUpdated: DateTime.now(),
-      );
-    } catch (e) {
-      state = state.copyWith(
-        isLoading: false,
-        errorMessage: 'Không thể tải dữ liệu dashboard. Vui lòng thử lại.',
-      );
-    }
+class StatsController extends AsyncNotifier<DashboardDto> {
+  @override
+  FutureOr<DashboardDto> build() async {
+    return _fetchStats();
   }
 
-  /// Refresh dashboard data
+  Future<DashboardDto> _fetchStats() async {
+    final api = ref.read(statsApiProvider);
+    return api.getDashboardStats();
+  }
+
   Future<void> refresh() async {
-    await loadDashboard();
+    state = const AsyncValue.loading();
+    state = await AsyncValue.guard(() => _fetchStats());
   }
 }
-
-/// Provider cho DashboardController
-final dashboardControllerProvider =
-    StateNotifierProvider<DashboardController, DashboardState>((ref) {
-  final apiClient = ref.watch(apiClientProvider);
-  return DashboardController(apiClient);
-});

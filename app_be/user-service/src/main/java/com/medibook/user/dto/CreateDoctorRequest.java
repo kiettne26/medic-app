@@ -29,5 +29,6 @@ public class CreateDoctorRequest {
     private String phone;
     private String avatarUrl;
     private Double consultationFee;
+    private Boolean isAvailable;
     private List<UUID> serviceIds;
 }

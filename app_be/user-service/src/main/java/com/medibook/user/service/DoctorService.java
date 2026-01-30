@@ -103,7 +103,7 @@ public class DoctorService {
                 .phone(request.getPhone())
                 .avatarUrl(request.getAvatarUrl())
                 .consultationFee(request.getConsultationFee())
-                .isAvailable(true)
+                .isAvailable(request.getIsAvailable() != null ? request.getIsAvailable() : true)
                 .build();
 
         // Gán services nếu có
@@ -130,6 +130,9 @@ public class DoctorService {
         doctor.setPhone(request.getPhone());
         doctor.setAvatarUrl(request.getAvatarUrl());
         doctor.setConsultationFee(request.getConsultationFee());
+        if (request.getIsAvailable() != null) {
+            doctor.setIsAvailable(request.getIsAvailable());
+        }
 
         if (request.getServiceIds() != null) {
             List<MedicalService> services = medicalServiceRepository.findAllById(request.getServiceIds());

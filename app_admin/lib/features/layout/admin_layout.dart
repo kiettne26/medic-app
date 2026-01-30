@@ -51,8 +51,6 @@ class _AdminLayoutState extends ConsumerState<AdminLayout> {
         children: [
           // Sidebar - ẩn trên mobile
           if (!isMobile) _buildSidebar(currentPath),
-
-          // Main Content Area
           Expanded(
             child: Container(
               color: AdminColors.backgroundLight,
@@ -73,9 +71,7 @@ class _AdminLayoutState extends ConsumerState<AdminLayout> {
   }
 
   Widget _buildDrawer(String currentPath) {
-    return Drawer(
-      child: _buildSidebarContent(currentPath),
-    );
+    return Drawer(child: _buildSidebarContent(currentPath));
   }
 
   Widget _buildSidebar(String currentPath) {
@@ -83,9 +79,7 @@ class _AdminLayoutState extends ConsumerState<AdminLayout> {
       width: 280,
       decoration: const BoxDecoration(
         color: AdminColors.cardLight,
-        border: Border(
-          right: BorderSide(color: AdminColors.borderLight),
-        ),
+        border: Border(right: BorderSide(color: AdminColors.borderLight)),
       ),
       child: _buildSidebarContent(currentPath),
     );
@@ -162,7 +156,7 @@ class _AdminLayoutState extends ConsumerState<AdminLayout> {
                 currentPath: currentPath,
               ),
               _NavItem(
-                icon: Icons.calendar_month_outlined,
+                icon: Icons.calendar_month_rounded, // Changed icon
                 label: 'Lịch hẹn',
                 path: '/bookings',
                 currentPath: currentPath,
@@ -188,17 +182,13 @@ class _AdminLayoutState extends ConsumerState<AdminLayout> {
           padding: const EdgeInsets.all(16),
           child: Container(
             decoration: const BoxDecoration(
-              border: Border(
-                top: BorderSide(color: AdminColors.borderLight),
-              ),
+              border: Border(top: BorderSide(color: AdminColors.borderLight)),
             ),
             padding: const EdgeInsets.only(top: 16),
             child: SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
-                onPressed: () {
-                  // TODO: Navigate to create booking
-                },
+                onPressed: () {},
                 icon: const Icon(Icons.add, size: 18),
                 label: Text(
                   'Thêm lịch mới',
@@ -225,15 +215,16 @@ class _AdminLayoutState extends ConsumerState<AdminLayout> {
   }
 
   Widget _buildTopBar(
-      BuildContext context, AuthState authState, bool isMobile) {
+    BuildContext context,
+    AuthState authState,
+    bool isMobile,
+  ) {
     return Container(
       height: 64,
       padding: const EdgeInsets.symmetric(horizontal: 24),
       decoration: const BoxDecoration(
         color: AdminColors.cardLight,
-        border: Border(
-          bottom: BorderSide(color: AdminColors.borderLight),
-        ),
+        border: Border(bottom: BorderSide(color: AdminColors.borderLight)),
       ),
       child: Row(
         children: [
@@ -499,11 +490,7 @@ class _TopBarIconButton extends StatelessWidget {
             borderRadius: BorderRadius.circular(8),
             child: Container(
               padding: const EdgeInsets.all(8),
-              child: Icon(
-                icon,
-                color: AdminColors.textSecondary,
-                size: 22,
-              ),
+              child: Icon(icon, color: AdminColors.textSecondary, size: 22),
             ),
           ),
         ),

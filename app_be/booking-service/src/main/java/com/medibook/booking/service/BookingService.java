@@ -246,6 +246,18 @@ public class BookingService {
     }
 
     /**
+     * Lấy tất cả booking (Admin)
+     */
+    public Page<BookingDto> getAllBookings(BookingStatus status, Pageable pageable) {
+        if (status != null) {
+            return bookingRepository.findByStatusOrderByCreatedAtDesc(status, pageable)
+                    .map(this::toDto);
+        }
+        return bookingRepository.findAll(pageable)
+                .map(this::toDto);
+    }
+
+    /**
      * Lấy slot trống của doctor trong ngày (cho bệnh nhân - chỉ slot APPROVED)
      */
     public List<TimeSlotDto> getAvailableSlots(UUID doctorId, LocalDate date) {

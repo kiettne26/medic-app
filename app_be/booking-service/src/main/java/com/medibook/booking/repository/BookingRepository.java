@@ -27,7 +27,12 @@ public interface BookingRepository extends JpaRepository<Booking, UUID> {
     Page<Booking> findByDoctorIdOrderByCreatedAtDesc(UUID doctorId, Pageable pageable);
 
     /**
-     * Lấy booking theo status
+     * Lấy booking theo status có phân trang
+     */
+    Page<Booking> findByStatusOrderByCreatedAtDesc(BookingStatus status, Pageable pageable);
+
+    /**
+     * Lấy booking theo status (List)
      */
     List<Booking> findByStatus(BookingStatus status);
 

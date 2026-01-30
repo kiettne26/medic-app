@@ -28,7 +28,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     );
     // Load dashboard data when screen initializes
     Future.microtask(() {
-      ref.read(dashboardControllerProvider.notifier).loadDashboard();
+      ref.read(statsControllerProvider.notifier).refresh();
     });
   }
 
@@ -48,9 +48,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               onSurface: AdminColors.textPrimary,
             ),
             textButtonTheme: TextButtonThemeData(
-              style: TextButton.styleFrom(
-                foregroundColor: AdminColors.primary,
-              ),
+              style: TextButton.styleFrom(foregroundColor: AdminColors.primary),
             ),
           ),
           child: child!,
@@ -96,13 +94,13 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final dashboardState = ref.watch(dashboardControllerProvider);
+    final dashboardState = ref.watch(statsControllerProvider);
     final screenWidth = MediaQuery.of(context).size.width;
     final isTablet = screenWidth < 1200;
     final isMobile = screenWidth < 768;
 
     return RefreshIndicator(
-      onRefresh: () => ref.read(dashboardControllerProvider.notifier).refresh(),
+      onRefresh: () => ref.read(statsControllerProvider.notifier).refresh(),
       child: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
         padding: EdgeInsets.all(isMobile ? 16 : 32),
@@ -110,34 +108,33 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Page Heading
-            _buildPageHeading(dashboardState.lastUpdated),
+            _buildPageHeading(null), // TODO: Add lastUpdated to state
 
             const SizedBox(height: 32),
 
             // Loading or Error
-            if (dashboardState.isLoading && dashboardState.data == null)
+            if (dashboardState.isLoading && !dashboardState.hasValue)
               const Center(
                 child: Padding(
                   padding: EdgeInsets.all(48),
                   child: CircularProgressIndicator(),
                 ),
               )
-            else if (dashboardState.errorMessage != null &&
-                dashboardState.data == null)
-              _buildErrorWidget(dashboardState.errorMessage!)
+            else if (dashboardState.hasError && !dashboardState.hasValue)
+              _buildErrorWidget(dashboardState.error.toString())
             else ...[
               // Stats Grid - 6 cards
-              _buildStatsGrid(isMobile, isTablet, dashboardState.data),
+              _buildStatsGrid(isMobile, isTablet, dashboardState.value),
 
               const SizedBox(height: 24),
 
               // Charts Section
-              _buildChartsSection(isMobile, dashboardState.data),
+              _buildChartsSection(isMobile, dashboardState.value),
 
               const SizedBox(height: 24),
 
               // Doctor Performance Table
-              _buildDoctorTable(dashboardState.data),
+              _buildDoctorTable(dashboardState.value),
             ],
           ],
         ),
@@ -164,7 +161,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             const SizedBox(height: 24),
             ElevatedButton.icon(
               onPressed: () {
-                ref.read(dashboardControllerProvider.notifier).loadDashboard();
+                ref.read(statsControllerProvider.notifier).refresh();
               },
               icon: const Icon(Icons.refresh),
               label: const Text('Thử lại'),
@@ -431,7 +428,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     }
 
     final maxY = maxBooking == 0 ? 20.0 : (maxBooking * 1.3).ceilToDouble();
-    final avgPerDay = barGroups.isEmpty ? 0 : (totalBookings / barGroups.length).round();
+    final avgPerDay = barGroups.isEmpty
+        ? 0
+        : (totalBookings / barGroups.length).round();
 
     // Calculate stats
     final pending = data?.pendingBookings ?? 0;
@@ -498,7 +497,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 ],
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
@@ -521,11 +523,27 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     borderRadius: BorderRadius.circular(12),
                   ),
                   itemBuilder: (context) => [
-                    _buildPopupMenuItem('week', '7 ngày qua', Icons.view_week_rounded),
-                    _buildPopupMenuItem('month', '30 ngày qua', Icons.calendar_view_month_rounded),
-                    _buildPopupMenuItem('3months', '3 tháng qua', Icons.date_range_rounded),
+                    _buildPopupMenuItem(
+                      'week',
+                      '7 ngày qua',
+                      Icons.view_week_rounded,
+                    ),
+                    _buildPopupMenuItem(
+                      'month',
+                      '30 ngày qua',
+                      Icons.calendar_view_month_rounded,
+                    ),
+                    _buildPopupMenuItem(
+                      '3months',
+                      '3 tháng qua',
+                      Icons.date_range_rounded,
+                    ),
                     const PopupMenuDivider(),
-                    _buildPopupMenuItem('custom', 'Chọn ngày...', Icons.edit_calendar_rounded),
+                    _buildPopupMenuItem(
+                      'custom',
+                      'Chọn ngày...',
+                      Icons.edit_calendar_rounded,
+                    ),
                   ],
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -621,9 +639,14 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   touchTooltipData: BarTouchTooltipData(
                     getTooltipColor: (group) => AdminColors.textPrimary,
                     tooltipRoundedRadius: 8,
-                    tooltipPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    tooltipPadding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
                     getTooltipItem: (group, groupIndex, rod, rodIndex) {
-                      final dayName = groupIndex < labels.length ? labels[groupIndex] : '';
+                      final dayName = groupIndex < labels.length
+                          ? labels[groupIndex]
+                          : '';
                       return BarTooltipItem(
                         '$dayName\n',
                         GoogleFonts.manrope(
@@ -686,8 +709,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                       },
                     ),
                   ),
-                  topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                  rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  topTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                  rightTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
                 ),
                 gridData: FlGridData(
                   show: true,
@@ -715,7 +742,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               const SizedBox(width: 20),
               _buildLegendItem('Xác nhận', const Color(0xFF3B82F6), confirmed),
               const SizedBox(width: 20),
-              _buildLegendItem('Hoàn thành', const Color(0xFF10B981), completed),
+              _buildLegendItem(
+                'Hoàn thành',
+                const Color(0xFF10B981),
+                completed,
+              ),
               const SizedBox(width: 20),
               _buildLegendItem('Hủy', const Color(0xFFEF4444), cancelled),
             ],
@@ -725,7 +756,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     );
   }
 
-  Widget _buildMiniStat(String label, String value, IconData icon, Color color) {
+  Widget _buildMiniStat(
+    String label,
+    String value,
+    IconData icon,
+    Color color,
+  ) {
     return Column(
       children: [
         Container(
@@ -792,7 +828,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
   String _getDateRangeText() {
     if (_selectedDateRange == null) return '7 ngày qua';
-    
+
     switch (_selectedPeriod) {
       case 'week':
         return '7 ngày qua';
@@ -809,7 +845,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     }
   }
 
-  PopupMenuItem<String> _buildPopupMenuItem(String value, String text, IconData icon) {
+  PopupMenuItem<String> _buildPopupMenuItem(
+    String value,
+    String text,
+    IconData icon,
+  ) {
     final isSelected = _selectedPeriod == value;
     return PopupMenuItem<String>(
       value: value,
@@ -831,11 +871,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           ),
           const Spacer(),
           if (isSelected)
-            Icon(
-              Icons.check_rounded,
-              size: 18,
-              color: AdminColors.primary,
-            ),
+            Icon(Icons.check_rounded, size: 18, color: AdminColors.primary),
         ],
       ),
     );
@@ -861,11 +897,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       for (int i = 0; i < popularServices.length; i++) {
         final s = popularServices[i];
         totalCount += s.bookingCount;
-        services.add(_ServiceData(
-          s.serviceName,
-          s.percentage,
-          colors[i % colors.length],
-        ));
+        services.add(
+          _ServiceData(s.serviceName, s.percentage, colors[i % colors.length]),
+        );
       }
     } else {
       // Default data if no API data
@@ -914,8 +948,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               ),
               IconButton(
                 onPressed: () {},
-                icon: const Icon(Icons.more_vert,
-                    color: AdminColors.textSecondary),
+                icon: const Icon(
+                  Icons.more_vert,
+                  color: AdminColors.textSecondary,
+                ),
               ),
             ],
           ),
@@ -1032,7 +1068,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       const Color(0xFFFEF3C7),
       const Color(0xFFE0E7FF),
     ];
-    
+
     // Map API data to _DoctorData
     final doctors = data?.topDoctors != null && data!.topDoctors!.isNotEmpty
         ? data.topDoctors!.asMap().entries.map((entry) {
@@ -1043,7 +1079,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               specialty: d.specialty ?? 'Chưa cập nhật',
               cases: d.totalBookings,
               rating: d.rating,
-              isOnline: d.isOnline ?? true,
+              isOnline: true, // TODO: Update backend to return online status
               avatarColor: avatarColors[i % avatarColors.length],
             );
           }).toList()
@@ -1335,9 +1371,7 @@ class _DoctorRow extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
       decoration: BoxDecoration(
-        border: Border(
-          bottom: BorderSide(color: AdminColors.borderLight),
-        ),
+        border: Border(bottom: BorderSide(color: AdminColors.borderLight)),
       ),
       child: Row(
         children: [

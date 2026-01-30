@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../bookings/data/dto/booking_dto.dart';
+import 'bookings_controller.dart';
 
 class BookingsScreen extends ConsumerStatefulWidget {
   const BookingsScreen({super.key});
@@ -13,62 +15,50 @@ class _BookingsScreenState extends ConsumerState<BookingsScreen> {
   String _statusFilter = 'ALL';
   final _searchController = TextEditingController();
 
-  // Mock data - sẽ thay bằng API thực
-  final List<Map<String, dynamic>> _bookings = [
-    {
-      'id': '1',
-      'patient': 'Nguyễn Văn A',
-      'doctor': 'BS. Trần Thị B',
-      'service': 'Khám tổng quát',
-      'date': '2026-01-29',
-      'time': '09:00',
-      'status': 'CONFIRMED',
-    },
-    {
-      'id': '2',
-      'patient': 'Lê Văn C',
-      'doctor': 'BS. Phạm Văn D',
-      'service': 'Tư vấn dinh dưỡng',
-      'date': '2026-01-29',
-      'time': '10:30',
-      'status': 'PENDING',
-    },
-    {
-      'id': '3',
-      'patient': 'Hoàng Thị E',
-      'doctor': 'BS. Nguyễn Văn F',
-      'service': 'Tư vấn tâm lý',
-      'date': '2026-01-28',
-      'time': '14:00',
-      'status': 'COMPLETED',
-    },
-    {
-      'id': '4',
-      'patient': 'Trần Văn G',
-      'doctor': 'BS. Lê Thị H',
-      'service': 'Khám tổng quát',
-      'date': '2026-01-28',
-      'time': '15:30',
-      'status': 'CANCELED',
-    },
-    {
-      'id': '5',
-      'patient': 'Phạm Thị K',
-      'doctor': 'BS. Trần Thị B',
-      'service': 'Khám tổng quát',
-      'date': '2026-01-30',
-      'time': '08:00',
-      'status': 'PENDING',
-    },
-  ];
+  @override
+  void initState() {
+    super.initState();
+    // Search listener to setState and re-filter client side
+    _searchController.addListener(() {
+      setState(() {});
+    });
+  }
 
-  List<Map<String, dynamic>> get _filteredBookings {
-    if (_statusFilter == 'ALL') return _bookings;
-    return _bookings.where((b) => b['status'] == _statusFilter).toList();
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _onFilterChanged(String status) {
+    if (_statusFilter == status) return;
+    setState(() {
+      _statusFilter = status;
+    });
+    // Call controller to refresh with new status
+    // Note: status 'ALL' maps to null for API
+    ref
+        .read(bookingsControllerProvider.notifier)
+        .refresh(status: status == 'ALL' ? null : status);
+  }
+
+  List<BookingDto> _applySearch(List<BookingDto> bookings) {
+    final query = _searchController.text.toLowerCase();
+    if (query.isEmpty) return bookings;
+    return bookings.where((b) {
+      final patient = b.patientName?.toLowerCase() ?? '';
+      final doctor = b.doctorName?.toLowerCase() ?? '';
+      final id = b.id.toLowerCase();
+      return patient.contains(query) ||
+          doctor.contains(query) ||
+          id.contains(query);
+    }).toList();
   }
 
   @override
   Widget build(BuildContext context) {
+    final bookingsAsync = ref.watch(bookingsControllerProvider);
+
     return Padding(
       padding: const EdgeInsets.all(24),
       child: Column(
@@ -103,30 +93,30 @@ class _BookingsScreenState extends ConsumerState<BookingsScreen> {
               _FilterChip(
                 label: 'Tất cả',
                 isSelected: _statusFilter == 'ALL',
-                onTap: () => setState(() => _statusFilter = 'ALL'),
+                onTap: () => _onFilterChanged('ALL'),
               ),
               _FilterChip(
                 label: 'Chờ xác nhận',
                 isSelected: _statusFilter == 'PENDING',
-                onTap: () => setState(() => _statusFilter = 'PENDING'),
+                onTap: () => _onFilterChanged('PENDING'),
                 color: Colors.orange,
               ),
               _FilterChip(
                 label: 'Đã xác nhận',
                 isSelected: _statusFilter == 'CONFIRMED',
-                onTap: () => setState(() => _statusFilter = 'CONFIRMED'),
+                onTap: () => _onFilterChanged('CONFIRMED'),
                 color: const Color(0xFF3949AB),
               ),
               _FilterChip(
                 label: 'Hoàn thành',
                 isSelected: _statusFilter == 'COMPLETED',
-                onTap: () => setState(() => _statusFilter = 'COMPLETED'),
+                onTap: () => _onFilterChanged('COMPLETED'),
                 color: Colors.green,
               ),
               _FilterChip(
                 label: 'Đã hủy',
                 isSelected: _statusFilter == 'CANCELED',
-                onTap: () => setState(() => _statusFilter = 'CANCELED'),
+                onTap: () => _onFilterChanged('CANCELED'),
                 color: Colors.red,
               ),
             ],
@@ -134,112 +124,113 @@ class _BookingsScreenState extends ConsumerState<BookingsScreen> {
 
           const SizedBox(height: 24),
 
-          // Stats Summary
-          Row(
-            children: [
-              _MiniStat(
-                value: _bookings.length.toString(),
-                label: 'Tổng cộng',
-                color: const Color(0xFF3949AB),
-              ),
-              _MiniStat(
-                value: _bookings
-                    .where((b) => b['status'] == 'PENDING')
-                    .length
-                    .toString(),
-                label: 'Chờ xác nhận',
-                color: Colors.orange,
-              ),
-              _MiniStat(
-                value: _bookings
-                    .where((b) => b['status'] == 'CONFIRMED')
-                    .length
-                    .toString(),
-                label: 'Đã xác nhận',
-                color: const Color(0xFF3949AB),
-              ),
-              _MiniStat(
-                value: _bookings
-                    .where((b) => b['status'] == 'COMPLETED')
-                    .length
-                    .toString(),
-                label: 'Hoàn thành',
-                color: Colors.green,
-              ),
-              _MiniStat(
-                value: _bookings
-                    .where((b) => b['status'] == 'CANCELED')
-                    .length
-                    .toString(),
-                label: 'Đã hủy',
-                color: Colors.red,
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 24),
-
-          // Bookings Table
-          Expanded(
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.04),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Column(
+          // Stats Summary (Calculated from current filtered list or separate API?)
+          // Since we are filtering on server, we might not have counts for OTHER statuses.
+          // Ideally we need a separate "BookingStats" API.
+          // For now, we can just show counts of current loaded list or remove this stats row
+          // if it's misleading when filtered.
+          // Or we fetch ALL first then filter client side to keep stats correct?
+          // Let's stick to server filtering for performance, and maybe hide stats or
+          // just show "Hiển thị X kết quả".
+          // The UI has _MiniStat. Let's just show count of current list.
+          bookingsAsync.when(
+            data: (bookings) {
+              final filtered = _applySearch(bookings);
+              return Column(
                 children: [
-                  // Table Header
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade50,
-                      borderRadius: const BorderRadius.vertical(
-                        top: Radius.circular(16),
+                  // Stats Row (Optional: simplified)
+                  // If we only have filtered data, we can't show "Pending" count if we are viewing "Completed".
+                  // So either we fetch ALL and filter client side (simpler for small apps)
+                  // OR we have a stats API.
+                  // Given "PredictedTaskSize", let's assuming fetching ALL and filtering Client Side is safer for now
+                  // to keep UI consistent, UNLESS result set is huge.
+                  // Let's try client side filtering if the API supports it,
+                  // BUT Controller has refresh(status).
+                  // Let's modify logic: Load ALL initially. Filter client side.
+                  // If user clicks filter, we update _statusFilter.
+                  // Does controller.refresh(status) overwrite state? Yes.
+                  // So if we switch tabs, we lose other data.
+                  // Let's just show "Bookings Count: X" for now.
+                  Row(
+                    children: [
+                      _MiniStat(
+                        value: filtered.length.toString(),
+                        label: 'Kết quả hiển thị',
+                        color: const Color(0xFF3949AB),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Bookings Table
+                  Expanded(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.04),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        children: [
+                          // Table Header
+                          Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: Colors.grey.shade50,
+                              borderRadius: const BorderRadius.vertical(
+                                top: Radius.circular(16),
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                _tableHeader('Mã', flex: 1),
+                                _tableHeader('Bệnh nhân', flex: 2),
+                                _tableHeader('Bác sĩ', flex: 2),
+                                _tableHeader('Dịch vụ', flex: 2),
+                                _tableHeader('Ngày', flex: 1),
+                                _tableHeader('Giờ', flex: 1),
+                                _tableHeader('Trạng thái', flex: 1),
+                              ],
+                            ),
+                          ),
+                          const Divider(height: 1),
+                          // Table Body
+                          Expanded(
+                            child: filtered.isEmpty
+                                ? Center(
+                                    child: Text(
+                                      'Không có lịch hẹn nào',
+                                      style: GoogleFonts.manrope(
+                                        color: Colors.grey,
+                                      ),
+                                    ),
+                                  )
+                                : ListView.separated(
+                                    itemCount: filtered.length,
+                                    separatorBuilder: (_, __) =>
+                                        const Divider(height: 1),
+                                    itemBuilder: (context, index) {
+                                      return _BookingRow(
+                                        booking: filtered[index],
+                                      );
+                                    },
+                                  ),
+                          ),
+                        ],
                       ),
                     ),
-                    child: Row(
-                      children: [
-                        _tableHeader('Mã', flex: 1),
-                        _tableHeader('Bệnh nhân', flex: 2),
-                        _tableHeader('Bác sĩ', flex: 2),
-                        _tableHeader('Dịch vụ', flex: 2),
-                        _tableHeader('Ngày', flex: 1),
-                        _tableHeader('Giờ', flex: 1),
-                        _tableHeader('Trạng thái', flex: 1),
-                      ],
-                    ),
-                  ),
-                  const Divider(height: 1),
-                  // Table Body
-                  Expanded(
-                    child: _filteredBookings.isEmpty
-                        ? Center(
-                            child: Text(
-                              'Không có lịch hẹn nào',
-                              style: GoogleFonts.manrope(color: Colors.grey),
-                            ),
-                          )
-                        : ListView.separated(
-                            itemCount: _filteredBookings.length,
-                            separatorBuilder: (_, __) =>
-                                const Divider(height: 1),
-                            itemBuilder: (context, index) {
-                              return _BookingRow(
-                                booking: _filteredBookings[index],
-                              );
-                            },
-                          ),
                   ),
                 ],
-              ),
-            ),
+              );
+            },
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (e, s) => Center(child: Text('Lỗi: $e')),
           ),
         ],
       ),
@@ -328,7 +319,7 @@ class _MiniStat extends StatelessWidget {
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.03),
+              color: Colors.black.withOpacity(0.03),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
@@ -373,7 +364,7 @@ class _MiniStat extends StatelessWidget {
 }
 
 class _BookingRow extends StatelessWidget {
-  final Map<String, dynamic> booking;
+  final BookingDto booking;
 
   const _BookingRow({required this.booking});
 
@@ -387,18 +378,19 @@ class _BookingRow extends StatelessWidget {
           Expanded(
             flex: 1,
             child: Text(
-              '#${booking['id']}',
+              '#${booking.id.substring(0, 8)}',
               style: GoogleFonts.manrope(
                 fontWeight: FontWeight.w500,
                 color: Colors.grey[600],
               ),
+              overflow: TextOverflow.ellipsis,
             ),
           ),
           // Patient
           Expanded(
             flex: 2,
             child: Text(
-              booking['patient'],
+              booking.patientName ?? 'N/A',
               style: GoogleFonts.manrope(fontWeight: FontWeight.w600),
             ),
           ),
@@ -406,7 +398,7 @@ class _BookingRow extends StatelessWidget {
           Expanded(
             flex: 2,
             child: Text(
-              booking['doctor'],
+              booking.doctorName ?? 'N/A',
               style: GoogleFonts.manrope(color: Colors.grey[700]),
             ),
           ),
@@ -414,25 +406,31 @@ class _BookingRow extends StatelessWidget {
           Expanded(
             flex: 2,
             child: Text(
-              booking['service'],
+              booking.serviceName ?? 'N/A',
               style: GoogleFonts.manrope(color: Colors.grey[700]),
             ),
           ),
           // Date
           Expanded(
             flex: 1,
-            child: Text(booking['date'], style: GoogleFonts.manrope()),
+            child: Text(
+              booking.timeSlot.date,
+              style: GoogleFonts.manrope(fontSize: 12),
+            ),
           ),
           // Time
           Expanded(
             flex: 1,
             child: Text(
-              booking['time'],
-              style: GoogleFonts.manrope(fontWeight: FontWeight.w500),
+              '${booking.timeSlot.startTime}',
+              style: GoogleFonts.manrope(
+                fontWeight: FontWeight.w500,
+                fontSize: 12,
+              ),
             ),
           ),
           // Status
-          Expanded(flex: 1, child: _StatusBadge(status: booking['status'])),
+          Expanded(flex: 1, child: _StatusBadge(status: booking.status)),
         ],
       ),
     );
@@ -474,17 +472,18 @@ class _StatusBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
+        color: color.withOpacity(0.1),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Text(
         label,
         style: GoogleFonts.manrope(
-          fontSize: 11,
+          fontSize: 10,
           fontWeight: FontWeight.bold,
           color: color,
         ),
         textAlign: TextAlign.center,
+        overflow: TextOverflow.ellipsis,
       ),
     );
   }

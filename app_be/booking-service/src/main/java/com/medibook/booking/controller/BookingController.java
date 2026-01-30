@@ -44,6 +44,17 @@ public class BookingController {
                 .body(ApiResponse.success("Đặt lịch thành công", booking));
     }
 
+    @GetMapping("/admin")
+    @Operation(summary = "Lấy danh sách tất cả booking (Admin)")
+    public ResponseEntity<ApiResponse<PageResponse<BookingDto>>> getAllBookings(
+            @RequestParam(required = false) com.medibook.common.enums.BookingStatus status,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        Page<BookingDto> bookings = bookingService.getAllBookings(status, PageRequest.of(page, size));
+        return ResponseEntity.ok(ApiResponse.success(
+                PageResponse.of(bookings.getContent(), page, size, bookings.getTotalElements())));
+    }
+
     @GetMapping("/{id}")
     @Operation(summary = "Lấy thông tin booking theo ID")
     public ResponseEntity<ApiResponse<BookingDto>> getBookingById(@PathVariable UUID id) {

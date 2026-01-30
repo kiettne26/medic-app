@@ -108,6 +108,15 @@ class ApiClient {
   }) async {
     return await _dio.delete(path, queryParameters: queryParameters);
   }
+
+  // PATCH request
+  Future<Response> patch(
+    String path, {
+    dynamic data,
+    Map<String, dynamic>? queryParameters,
+  }) async {
+    return await _dio.patch(path, data: data, queryParameters: queryParameters);
+  }
 }
 
 // Provider for ApiClient

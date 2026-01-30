@@ -7,6 +7,7 @@ import '../../features/dashboard/presentation/dashboard_screen.dart';
 import '../../features/services/presentation/services_screen.dart';
 import '../../features/doctors/presentation/doctors_screen.dart';
 import '../../features/bookings/presentation/bookings_screen.dart';
+import '../../features/revenue/presentation/revenue_screen.dart';
 import '../../features/layout/admin_layout.dart';
 
 /// App Router với GoRouter
@@ -51,6 +52,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/bookings',
             builder: (context, state) => const BookingsScreen(),
+          ),
+          GoRoute(
+            path: '/revenue',
+            builder: (context, state) => const RevenueScreen(),
           ),
         ],
       ),

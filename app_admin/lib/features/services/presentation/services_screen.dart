@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../data/dto/medical_service_dto.dart';
+import 'services_controller.dart';
 
 class ServicesScreen extends ConsumerStatefulWidget {
   const ServicesScreen({super.key});
@@ -12,44 +14,10 @@ class ServicesScreen extends ConsumerStatefulWidget {
 class _ServicesScreenState extends ConsumerState<ServicesScreen> {
   final _searchController = TextEditingController();
 
-  // Mock data - sẽ thay bằng API thực
-  final List<Map<String, dynamic>> _services = [
-    {
-      'id': '1',
-      'name': 'Khám tổng quát',
-      'price': 300000,
-      'duration': 30,
-      'description': 'Khám sức khỏe tổng quát, kiểm tra các chỉ số cơ bản',
-      'active': true,
-    },
-    {
-      'id': '2',
-      'name': 'Tư vấn dinh dưỡng',
-      'price': 250000,
-      'duration': 45,
-      'description': 'Tư vấn chế độ ăn uống và dinh dưỡng phù hợp',
-      'active': true,
-    },
-    {
-      'id': '3',
-      'name': 'Tư vấn tâm lý',
-      'price': 400000,
-      'duration': 60,
-      'description': 'Tư vấn và hỗ trợ tâm lý, giảm stress',
-      'active': true,
-    },
-    {
-      'id': '4',
-      'name': 'Khám chuyên khoa tim mạch',
-      'price': 500000,
-      'duration': 45,
-      'description': 'Khám và đánh giá sức khỏe tim mạch',
-      'active': false,
-    },
-  ];
-
   @override
   Widget build(BuildContext context) {
+    final servicesAsync = ref.watch(servicesControllerProvider);
+
     return Padding(
       padding: const EdgeInsets.all(24),
       child: Column(
@@ -140,22 +108,35 @@ class _ServicesScreenState extends ConsumerState<ServicesScreen> {
                   const Divider(height: 1),
                   // Table Body
                   Expanded(
-                    child: ListView.separated(
-                      itemCount: _services.length,
-                      separatorBuilder: (_, __) => const Divider(height: 1),
-                      itemBuilder: (context, index) {
-                        final service = _services[index];
-                        return _ServiceRow(
-                          service: service,
-                          onEdit: () => _showServiceDialog(context, service),
-                          onDelete: () => _confirmDelete(context, service),
-                          onToggle: () {
-                            setState(() {
-                              service['active'] = !service['active'];
-                            });
+                    child: servicesAsync.when(
+                      data: (services) {
+                        return ListView.separated(
+                          itemCount: services.length,
+                          separatorBuilder: (_, __) => const Divider(height: 1),
+                          itemBuilder: (context, index) {
+                            final service = services[index];
+                            return _ServiceRow(
+                              service: service,
+                              onEdit: () =>
+                                  _showServiceDialog(context, service),
+                              onDelete: () => _confirmDelete(context, service),
+                              onToggle: () {
+                                ref
+                                    .read(servicesControllerProvider.notifier)
+                                    .toggleService(service.id);
+                              },
+                            );
                           },
                         );
                       },
+                      loading: () =>
+                          const Center(child: CircularProgressIndicator()),
+                      error: (error, stack) => Center(
+                        child: Text(
+                          'Lỗi tải dữ liệu: $error',
+                          style: const TextStyle(color: Colors.red),
+                        ),
+                      ),
                     ),
                   ),
                 ],
@@ -181,20 +162,17 @@ class _ServicesScreenState extends ConsumerState<ServicesScreen> {
     );
   }
 
-  void _showServiceDialog(
-    BuildContext context, [
-    Map<String, dynamic>? service,
-  ]) {
+  void _showServiceDialog(BuildContext context, [MedicalServiceDto? service]) {
     final isEdit = service != null;
-    final nameController = TextEditingController(text: service?['name'] ?? '');
+    final nameController = TextEditingController(text: service?.name ?? '');
     final priceController = TextEditingController(
-      text: service?['price']?.toString() ?? '',
+      text: service?.price.toString() ?? '',
     );
     final durationController = TextEditingController(
-      text: service?['duration']?.toString() ?? '',
+      text: service?.durationMinutes.toString() ?? '',
     );
     final descController = TextEditingController(
-      text: service?['description'] ?? '',
+      text: service?.description ?? '',
     );
 
     showDialog(
@@ -261,9 +239,26 @@ class _ServicesScreenState extends ConsumerState<ServicesScreen> {
             child: const Text('Hủy'),
           ),
           ElevatedButton(
-            onPressed: () {
-              // TODO: Save service via API
-              Navigator.pop(context);
+            onPressed: () async {
+              final data = {
+                'name': nameController.text,
+                'price': double.tryParse(priceController.text) ?? 0,
+                'durationMinutes': int.tryParse(durationController.text) ?? 0,
+                'description': descController.text,
+                'category': 'GENERAL', // Default category
+                'isActive': true,
+              };
+
+              if (isEdit) {
+                await ref
+                    .read(servicesControllerProvider.notifier)
+                    .updateService(service.id, data);
+              } else {
+                await ref
+                    .read(servicesControllerProvider.notifier)
+                    .createService(data);
+              }
+              if (context.mounted) Navigator.pop(context);
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF3949AB),
@@ -276,26 +271,24 @@ class _ServicesScreenState extends ConsumerState<ServicesScreen> {
     );
   }
 
-  void _confirmDelete(BuildContext context, Map<String, dynamic> service) {
+  void _confirmDelete(BuildContext context, MedicalServiceDto service) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Text('Xác nhận xóa'),
-        content: Text(
-          'Bạn có chắc chắn muốn xóa dịch vụ "${service['name']}"?',
-        ),
+        content: Text('Bạn có chắc chắn muốn xóa dịch vụ "${service.name}"?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: const Text('Hủy'),
           ),
           ElevatedButton(
-            onPressed: () {
-              setState(() {
-                _services.removeWhere((s) => s['id'] == service['id']);
-              });
-              Navigator.pop(context);
+            onPressed: () async {
+              await ref
+                  .read(servicesControllerProvider.notifier)
+                  .deleteService(service.id);
+              if (context.mounted) Navigator.pop(context);
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.red,
@@ -310,7 +303,7 @@ class _ServicesScreenState extends ConsumerState<ServicesScreen> {
 }
 
 class _ServiceRow extends StatelessWidget {
-  final Map<String, dynamic> service;
+  final MedicalServiceDto service;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
   final VoidCallback onToggle;
@@ -324,7 +317,7 @@ class _ServiceRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isActive = service['active'] as bool;
+    final isActive = service.isActive; // using isActive from DTO
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -337,7 +330,7 @@ class _ServiceRow extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  service['name'],
+                  service.name,
                   style: GoogleFonts.manrope(
                     fontWeight: FontWeight.w600,
                     fontSize: 14,
@@ -345,7 +338,7 @@ class _ServiceRow extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  service['description'],
+                  service.description ?? '',
                   style: GoogleFonts.manrope(
                     fontSize: 12,
                     color: Colors.grey[600],
@@ -360,7 +353,7 @@ class _ServiceRow extends StatelessWidget {
           Expanded(
             flex: 2,
             child: Text(
-              _formatPrice(service['price']),
+              _formatPrice(service.price),
               style: GoogleFonts.manrope(
                 fontWeight: FontWeight.w600,
                 color: const Color(0xFF3949AB),
@@ -371,7 +364,7 @@ class _ServiceRow extends StatelessWidget {
           Expanded(
             flex: 1,
             child: Text(
-              '${service['duration']} phút',
+              '${service.durationMinutes} phút',
               style: GoogleFonts.manrope(),
             ),
           ),
@@ -409,7 +402,7 @@ class _ServiceRow extends StatelessWidget {
     );
   }
 
-  String _formatPrice(int price) {
+  String _formatPrice(double price) {
     return '${(price / 1000).toStringAsFixed(0)}.000 đ';
   }
 }

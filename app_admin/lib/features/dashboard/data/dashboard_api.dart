@@ -33,7 +33,9 @@ class DashboardApi {
           'groupBy': groupBy,
         },
       );
-      final data = response.data['data'] as List;
+      final rawData = response.data['data'];
+      if (rawData == null) return [];
+      final data = rawData as List;
       return data.map((e) => TimeSeriesData.fromJson(e)).toList();
     } catch (e) {
       rethrow;
@@ -47,7 +49,9 @@ class DashboardApi {
         '/analytics/doctors/rankings',
         queryParameters: {'limit': limit},
       );
-      final data = response.data['data'] as List;
+      final rawData = response.data['data'];
+      if (rawData == null) return [];
+      final data = rawData as List;
       return data.map((e) => DoctorStats.fromJson(e)).toList();
     } catch (e) {
       rethrow;

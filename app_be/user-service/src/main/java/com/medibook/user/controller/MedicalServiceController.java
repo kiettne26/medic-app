@@ -27,30 +27,78 @@ public class MedicalServiceController {
 
     @GetMapping
     @Operation(summary = "Lấy danh sách tất cả dịch vụ")
-    public ResponseEntity<ApiResponse<List<MedicalServiceDto>>> getAllServices() {
-        List<MedicalServiceDto> services = medicalServiceRepository.findByIsActiveTrue()
-                .stream()
+    public ResponseEntity<ApiResponse<List<MedicalServiceDto>>> getAllServices(
+            @RequestParam(required = false, defaultValue = "false") boolean includeInactive) {
+        List<MedicalService> services;
+        if (includeInactive) {
+            services = medicalServiceRepository.findAll();
+        } else {
+            services = medicalServiceRepository.findByIsActiveTrue();
+        }
+
+        List<MedicalServiceDto> dtos = services.stream()
                 .map(this::toDto)
                 .collect(Collectors.toList());
-        return ResponseEntity.ok(ApiResponse.success(services));
+        return ResponseEntity.ok(ApiResponse.success(dtos));
     }
 
-    @GetMapping("/{id}")
-    @Operation(summary = "Lấy chi tiết một dịch vụ")
-    public ResponseEntity<ApiResponse<MedicalServiceDto>> getServiceById(@PathVariable UUID id) {
+    @PostMapping
+    @Operation(summary = "Tạo mới dịch vụ")
+    public ResponseEntity<ApiResponse<MedicalServiceDto>> createService(@RequestBody MedicalServiceDto request) {
+        MedicalService service = new MedicalService();
+        service.setName(request.getName());
+        service.setDescription(request.getDescription());
+        service.setPrice(request.getPrice());
+        service.setDurationMinutes(request.getDurationMinutes());
+        service.setCategory(request.getCategory());
+        service.setImageUrl(request.getImageUrl()); // Explicitly set imageUrl
+        service.setIsActive(true);
+
+        MedicalService saved = medicalServiceRepository.save(service);
+        return ResponseEntity.ok(ApiResponse.success(toDto(saved)));
+    }
+
+    @PutMapping("/{id}")
+    @Operation(summary = "Cập nhật dịch vụ")
+    public ResponseEntity<ApiResponse<MedicalServiceDto>> updateService(@PathVariable UUID id,
+            @RequestBody MedicalServiceDto request) {
         return medicalServiceRepository.findById(id)
-                .map(service -> ResponseEntity.ok(ApiResponse.success(toDto(service))))
+                .map(service -> {
+                    service.setName(request.getName());
+                    service.setDescription(request.getDescription());
+                    service.setPrice(request.getPrice());
+                    service.setDurationMinutes(request.getDurationMinutes());
+                    service.setCategory(request.getCategory());
+                    service.setImageUrl(request.getImageUrl());
+                    if (request.getIsActive() != null) {
+                        service.setIsActive(request.getIsActive());
+                    }
+                    return ResponseEntity.ok(ApiResponse.success(toDto(medicalServiceRepository.save(service))));
+                })
                 .orElse(ResponseEntity.ok(ApiResponse.error("Service not found")));
     }
 
-    @GetMapping("/category/{category}")
-    @Operation(summary = "Lấy dịch vụ theo danh mục")
-    public ResponseEntity<ApiResponse<List<MedicalServiceDto>>> getServicesByCategory(@PathVariable String category) {
-        List<MedicalServiceDto> services = medicalServiceRepository.findByCategoryAndIsActiveTrue(category)
-                .stream()
-                .map(this::toDto)
-                .collect(Collectors.toList());
-        return ResponseEntity.ok(ApiResponse.success(services));
+    @DeleteMapping("/{id}")
+    @Operation(summary = "Xóa dịch vụ (Soft delete)")
+    public ResponseEntity<ApiResponse<Void>> deleteService(@PathVariable UUID id) {
+        return medicalServiceRepository.findById(id)
+                .map(service -> {
+                    service.setIsActive(false);
+                    medicalServiceRepository.save(service);
+                    return ResponseEntity.ok(ApiResponse.<Void>success(null));
+                })
+                .orElse(ResponseEntity.ok(ApiResponse.error("Service not found")));
+    }
+
+    @PatchMapping("/{id}/toggle-active")
+    @Operation(summary = "Kích hoạt/Vô hiệu hóa dịch vụ")
+    public ResponseEntity<ApiResponse<MedicalServiceDto>> toggleActive(@PathVariable UUID id) {
+        return medicalServiceRepository.findById(id)
+                .map(service -> {
+                    service.setIsActive(!Boolean.TRUE.equals(service.getIsActive()));
+                    return ResponseEntity.ok(ApiResponse.success(toDto(medicalServiceRepository.save(service))));
+                })
+                .orElse(ResponseEntity.ok(ApiResponse.error("Service not found")));
     }
 
     private MedicalServiceDto toDto(MedicalService entity) {
@@ -61,6 +109,7 @@ public class MedicalServiceController {
                 .price(entity.getPrice())
                 .durationMinutes(entity.getDurationMinutes())
                 .category(entity.getCategory())
+                .isActive(entity.getIsActive())
                 .imageUrl(entity.getImageUrl())
                 .build();
     }
