@@ -65,3 +65,52 @@ Map<String, dynamic> _$$TimeSlotDtoImplToJson(_$TimeSlotDtoImpl instance) =>
       'startTime': instance.startTime,
       'endTime': instance.endTime,
     };
+
+_$BookingStatsDtoImpl _$$BookingStatsDtoImplFromJson(
+  Map<String, dynamic> json,
+) => _$BookingStatsDtoImpl(
+  totalToday: (json['totalToday'] as num?)?.toInt() ?? 0,
+  pendingCount: (json['pendingCount'] as num?)?.toInt() ?? 0,
+  confirmedCount: (json['confirmedCount'] as num?)?.toInt() ?? 0,
+  completedCount: (json['completedCount'] as num?)?.toInt() ?? 0,
+  canceledCount: (json['canceledCount'] as num?)?.toInt() ?? 0,
+  todayChangePercent: (json['todayChangePercent'] as num?)?.toDouble() ?? 0.0,
+  pendingChangePercent:
+      (json['pendingChangePercent'] as num?)?.toDouble() ?? 0.0,
+  completedChangePercent:
+      (json['completedChangePercent'] as num?)?.toDouble() ?? 0.0,
+);
+
+Map<String, dynamic> _$$BookingStatsDtoImplToJson(
+  _$BookingStatsDtoImpl instance,
+) => <String, dynamic>{
+  'totalToday': instance.totalToday,
+  'pendingCount': instance.pendingCount,
+  'confirmedCount': instance.confirmedCount,
+  'completedCount': instance.completedCount,
+  'canceledCount': instance.canceledCount,
+  'todayChangePercent': instance.todayChangePercent,
+  'pendingChangePercent': instance.pendingChangePercent,
+  'completedChangePercent': instance.completedChangePercent,
+};
+
+_$BookingPageDtoImpl _$$BookingPageDtoImplFromJson(Map<String, dynamic> json) =>
+    _$BookingPageDtoImpl(
+      content: (json['content'] as List<dynamic>)
+          .map((e) => BookingDto.fromJson(e as Map<String, dynamic>))
+          .toList(),
+      totalElements: (json['totalElements'] as num?)?.toInt() ?? 0,
+      totalPages: (json['totalPages'] as num?)?.toInt() ?? 0,
+      currentPage: (json['currentPage'] as num?)?.toInt() ?? 0,
+      pageSize: (json['pageSize'] as num?)?.toInt() ?? 10,
+    );
+
+Map<String, dynamic> _$$BookingPageDtoImplToJson(
+  _$BookingPageDtoImpl instance,
+) => <String, dynamic>{
+  'content': instance.content,
+  'totalElements': instance.totalElements,
+  'totalPages': instance.totalPages,
+  'currentPage': instance.currentPage,
+  'pageSize': instance.pageSize,
+};

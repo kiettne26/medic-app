@@ -157,6 +157,16 @@ public class TimeSlotController {
 
     // ==================== ADMIN ENDPOINTS ====================
 
+    @GetMapping("/admin/all")
+    @Operation(summary = "Lấy tất cả slot (Admin) - có thể filter theo status và khoảng ngày")
+    public ResponseEntity<ApiResponse<List<TimeSlotDto>>> getAllSlots(
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
+        log.info("getAllSlots called with status={}, startDate={}, endDate={}", status, startDate, endDate);
+        return ResponseEntity.ok(ApiResponse.success(bookingService.getAllSlots(status, startDate, endDate)));
+    }
+
     @GetMapping("/pending")
     @Operation(summary = "Lấy danh sách slot chờ duyệt (Admin)")
     public ResponseEntity<ApiResponse<List<TimeSlotDto>>> getPendingSlots() {
@@ -176,6 +186,22 @@ public class TimeSlotController {
     public ResponseEntity<ApiResponse<TimeSlotDto>> rejectSlot(@PathVariable UUID slotId) {
         log.info("rejectSlot called: slotId={}", slotId);
         return ResponseEntity.ok(ApiResponse.success(bookingService.rejectSlot(slotId)));
+    }
+
+    @PutMapping("/approve-bulk")
+    @Operation(summary = "Duyệt nhiều slot cùng lúc (Admin)")
+    public ResponseEntity<ApiResponse<String>> approveBulkSlots(@RequestBody List<UUID> slotIds) {
+        log.info("approveBulkSlots called: {} slots", slotIds.size());
+        int count = bookingService.approveBulkSlots(slotIds);
+        return ResponseEntity.ok(ApiResponse.success("Đã duyệt " + count + " lịch"));
+    }
+
+    @PutMapping("/reject-bulk")
+    @Operation(summary = "Từ chối nhiều slot cùng lúc (Admin)")
+    public ResponseEntity<ApiResponse<String>> rejectBulkSlots(@RequestBody List<UUID> slotIds) {
+        log.info("rejectBulkSlots called: {} slots", slotIds.size());
+        int count = bookingService.rejectBulkSlots(slotIds);
+        return ResponseEntity.ok(ApiResponse.success("Đã từ chối " + count + " lịch"));
     }
 
     // ==================== HELPER METHODS ====================

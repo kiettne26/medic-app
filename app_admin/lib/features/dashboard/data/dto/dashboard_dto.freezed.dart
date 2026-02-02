@@ -29,6 +29,7 @@ mixin _$DashboardDto {
   int get confirmedBookings => throw _privateConstructorUsedError;
   int get completedBookings => throw _privateConstructorUsedError;
   int get cancelledBookings => throw _privateConstructorUsedError;
+  int get totalRevenue => throw _privateConstructorUsedError;
   List<TimeSeriesData> get bookingsByDay => throw _privateConstructorUsedError;
   List<TimeSeriesData> get bookingsByWeek => throw _privateConstructorUsedError;
   List<TimeSeriesData> get bookingsByMonth =>
@@ -62,6 +63,7 @@ abstract class $DashboardDtoCopyWith<$Res> {
     int confirmedBookings,
     int completedBookings,
     int cancelledBookings,
+    int totalRevenue,
     List<TimeSeriesData> bookingsByDay,
     List<TimeSeriesData> bookingsByWeek,
     List<TimeSeriesData> bookingsByMonth,
@@ -93,6 +95,7 @@ class _$DashboardDtoCopyWithImpl<$Res, $Val extends DashboardDto>
     Object? confirmedBookings = null,
     Object? completedBookings = null,
     Object? cancelledBookings = null,
+    Object? totalRevenue = null,
     Object? bookingsByDay = null,
     Object? bookingsByWeek = null,
     Object? bookingsByMonth = null,
@@ -132,6 +135,10 @@ class _$DashboardDtoCopyWithImpl<$Res, $Val extends DashboardDto>
             cancelledBookings: null == cancelledBookings
                 ? _value.cancelledBookings
                 : cancelledBookings // ignore: cast_nullable_to_non_nullable
+                      as int,
+            totalRevenue: null == totalRevenue
+                ? _value.totalRevenue
+                : totalRevenue // ignore: cast_nullable_to_non_nullable
                       as int,
             bookingsByDay: null == bookingsByDay
                 ? _value.bookingsByDay
@@ -177,6 +184,7 @@ abstract class _$$DashboardDtoImplCopyWith<$Res>
     int confirmedBookings,
     int completedBookings,
     int cancelledBookings,
+    int totalRevenue,
     List<TimeSeriesData> bookingsByDay,
     List<TimeSeriesData> bookingsByWeek,
     List<TimeSeriesData> bookingsByMonth,
@@ -207,6 +215,7 @@ class __$$DashboardDtoImplCopyWithImpl<$Res>
     Object? confirmedBookings = null,
     Object? completedBookings = null,
     Object? cancelledBookings = null,
+    Object? totalRevenue = null,
     Object? bookingsByDay = null,
     Object? bookingsByWeek = null,
     Object? bookingsByMonth = null,
@@ -247,6 +256,10 @@ class __$$DashboardDtoImplCopyWithImpl<$Res>
             ? _value.cancelledBookings
             : cancelledBookings // ignore: cast_nullable_to_non_nullable
                   as int,
+        totalRevenue: null == totalRevenue
+            ? _value.totalRevenue
+            : totalRevenue // ignore: cast_nullable_to_non_nullable
+                  as int,
         bookingsByDay: null == bookingsByDay
             ? _value._bookingsByDay
             : bookingsByDay // ignore: cast_nullable_to_non_nullable
@@ -284,6 +297,7 @@ class _$DashboardDtoImpl implements _DashboardDto {
     this.confirmedBookings = 0,
     this.completedBookings = 0,
     this.cancelledBookings = 0,
+    this.totalRevenue = 0,
     final List<TimeSeriesData> bookingsByDay = const [],
     final List<TimeSeriesData> bookingsByWeek = const [],
     final List<TimeSeriesData> bookingsByMonth = const [],
@@ -322,6 +336,9 @@ class _$DashboardDtoImpl implements _DashboardDto {
   @override
   @JsonKey()
   final int cancelledBookings;
+  @override
+  @JsonKey()
+  final int totalRevenue;
   final List<TimeSeriesData> _bookingsByDay;
   @override
   @JsonKey()
@@ -369,7 +386,7 @@ class _$DashboardDtoImpl implements _DashboardDto {
 
   @override
   String toString() {
-    return 'DashboardDto(totalBookings: $totalBookings, totalDoctors: $totalDoctors, totalPatients: $totalPatients, todayBookings: $todayBookings, pendingBookings: $pendingBookings, confirmedBookings: $confirmedBookings, completedBookings: $completedBookings, cancelledBookings: $cancelledBookings, bookingsByDay: $bookingsByDay, bookingsByWeek: $bookingsByWeek, bookingsByMonth: $bookingsByMonth, topDoctors: $topDoctors, popularServices: $popularServices)';
+    return 'DashboardDto(totalBookings: $totalBookings, totalDoctors: $totalDoctors, totalPatients: $totalPatients, todayBookings: $todayBookings, pendingBookings: $pendingBookings, confirmedBookings: $confirmedBookings, completedBookings: $completedBookings, cancelledBookings: $cancelledBookings, totalRevenue: $totalRevenue, bookingsByDay: $bookingsByDay, bookingsByWeek: $bookingsByWeek, bookingsByMonth: $bookingsByMonth, topDoctors: $topDoctors, popularServices: $popularServices)';
   }
 
   @override
@@ -393,6 +410,8 @@ class _$DashboardDtoImpl implements _DashboardDto {
                 other.completedBookings == completedBookings) &&
             (identical(other.cancelledBookings, cancelledBookings) ||
                 other.cancelledBookings == cancelledBookings) &&
+            (identical(other.totalRevenue, totalRevenue) ||
+                other.totalRevenue == totalRevenue) &&
             const DeepCollectionEquality().equals(
               other._bookingsByDay,
               _bookingsByDay,
@@ -427,6 +446,7 @@ class _$DashboardDtoImpl implements _DashboardDto {
     confirmedBookings,
     completedBookings,
     cancelledBookings,
+    totalRevenue,
     const DeepCollectionEquality().hash(_bookingsByDay),
     const DeepCollectionEquality().hash(_bookingsByWeek),
     const DeepCollectionEquality().hash(_bookingsByMonth),
@@ -458,6 +478,7 @@ abstract class _DashboardDto implements DashboardDto {
     final int confirmedBookings,
     final int completedBookings,
     final int cancelledBookings,
+    final int totalRevenue,
     final List<TimeSeriesData> bookingsByDay,
     final List<TimeSeriesData> bookingsByWeek,
     final List<TimeSeriesData> bookingsByMonth,
@@ -484,6 +505,8 @@ abstract class _DashboardDto implements DashboardDto {
   int get completedBookings;
   @override
   int get cancelledBookings;
+  @override
+  int get totalRevenue;
   @override
   List<TimeSeriesData> get bookingsByDay;
   @override

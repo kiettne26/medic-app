@@ -155,10 +155,16 @@ class _AdminLayoutState extends ConsumerState<AdminLayout> {
                 path: '/patients',
                 currentPath: currentPath,
               ),
-              _NavItem(
+_NavItem(
                 icon: Icons.calendar_month_rounded, // Changed icon
                 label: 'Lịch hẹn',
                 path: '/bookings',
+                currentPath: currentPath,
+              ),
+              _NavItem(
+                icon: Icons.event_available_outlined,
+                label: 'Duyệt lịch',
+                path: '/schedules',
                 currentPath: currentPath,
               ),
               _NavItem(
@@ -191,7 +197,7 @@ class _AdminLayoutState extends ConsumerState<AdminLayout> {
                 onPressed: () {},
                 icon: const Icon(Icons.add, size: 18),
                 label: Text(
-                  'Thêm lịch mới',
+                  '',
                   style: GoogleFonts.manrope(
                     fontWeight: FontWeight.bold,
                     fontSize: 14,

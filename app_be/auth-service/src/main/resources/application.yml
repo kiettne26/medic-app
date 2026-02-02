@@ -7,7 +7,7 @@ spring:
   datasource:
     url: jdbc:postgresql://${SUPABASE_HOST:db.dslbtevbqmxlmulqxcqk.supabase.co}:${SUPABASE_PORT:5432}/postgres?stringtype=unspecified
     username: ${SUPABASE_USER:postgres}
-    password: ${SUPABASE_PASSWORD:your-password}
+    password: ${SUPABASE_PASSWORD:chukiet2609}
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:

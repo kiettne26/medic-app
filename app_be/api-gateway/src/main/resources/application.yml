@@ -47,6 +47,12 @@ spring:
           filters:
             - StripPrefix=1
 
+        # WebSocket for Booking Service (real-time slot notifications)
+        - id: booking-service-ws
+          uri: lb:ws://booking-service
+          predicates:
+            - Path=/ws/booking/**
+
         # Notification Service
         - id: notification-service
           uri: lb://notification-service

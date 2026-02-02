@@ -8,11 +8,16 @@ import com.medibook.user.repository.DoctorRepository;
 import com.medibook.user.repository.ProfileRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 /**
  * Profile Service - Quản lý hồ sơ người dùng
@@ -162,6 +167,77 @@ public class ProfileService {
                 doctorRepository.save(doctor);
                 log.info("Doctor info synced from Profile for userId: {}", userId);
             }
+        });
+    }
+
+    // ===================== ADMIN METHODS =====================
+
+    /**
+     * Lấy danh sách tất cả bệnh nhân (có phân trang)
+     * Loại bỏ những profile thuộc về bác sĩ
+     */
+    public Page<ProfileDto> getAllPatients(Pageable pageable, String search) {
+        log.info("Fetching all patients with search: {}", search);
+        
+        // Lấy tất cả doctor userIds để loại bỏ
+        List<UUID> doctorUserIds = doctorRepository.findAll().stream()
+                .map(Doctor::getUserId)
+                .collect(Collectors.toList());
+        
+        Page<Profile> profilePage;
+        if (search != null && !search.trim().isEmpty()) {
+            profilePage = profileRepository.findByFullNameContainingIgnoreCaseAndUserIdNotIn(
+                    search.trim(), doctorUserIds, pageable);
+        } else {
+            profilePage = profileRepository.findByUserIdNotIn(doctorUserIds, pageable);
+        }
+        
+        List<ProfileDto> dtos = profilePage.getContent().stream()
+                .map(this::toDto)
+                .collect(Collectors.toList());
+        
+        return new PageImpl<>(dtos, pageable, profilePage.getTotalElements());
+    }
+
+    /**
+     * Lấy tất cả bệnh nhân không phân trang
+     */
+    public List<ProfileDto> getAllPatientsNoPaging(String search) {
+        log.info("Fetching all patients (no paging) with search: {}", search);
+        
+        // Lấy tất cả doctor userIds để loại bỏ
+        List<UUID> doctorUserIds = doctorRepository.findAll().stream()
+                .map(Doctor::getUserId)
+                .collect(Collectors.toList());
+        
+        List<Profile> profiles;
+        if (search != null && !search.trim().isEmpty()) {
+            profiles = profileRepository.findByFullNameContainingIgnoreCaseAndUserIdNotIn(search.trim(), doctorUserIds);
+        } else {
+            profiles = profileRepository.findByUserIdNotIn(doctorUserIds);
+        }
+        
+        return profiles.stream()
+                .map(this::toDto)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Xóa bệnh nhân (chỉ xóa profile, không xóa user auth)
+     */
+    @Transactional
+    public void deletePatient(UUID userId) {
+        log.info("Deleting patient profile for userId: {}", userId);
+        
+        // Kiểm tra không phải bác sĩ
+        if (doctorRepository.findByUserId(userId).isPresent()) {
+            throw new com.medibook.common.exception.BadRequestException(
+                    "Không thể xóa profile của bác sĩ từ trang bệnh nhân");
+        }
+        
+        profileRepository.findByUserId(userId).ifPresent(profile -> {
+            profileRepository.delete(profile);
+            log.info("Deleted patient profile for userId: {}", userId);
         });
     }
 }

@@ -35,6 +35,7 @@ public class BookingService {
     private final TimeSlotRepository timeSlotRepository;
     private final BookingStatusHistoryRepository statusHistoryRepository;
     private final JdbcTemplate jdbcTemplate;
+    private final SlotNotificationService slotNotificationService;
 
     /**
      * Tìm doctorId từ userId (ID tài khoản)
@@ -332,7 +333,12 @@ public class BookingService {
         slot.setVersion(0L);
 
         TimeSlot saved = timeSlotRepository.save(slot);
-        return toSlotDto(saved);
+        TimeSlotDto slotDto = toSlotDto(saved);
+        
+        // Send WebSocket notification to admin
+        slotNotificationService.notifyNewPendingSlot(slotDto);
+        
+        return slotDto;
     }
 
     /**
@@ -437,9 +443,25 @@ public class BookingService {
      * Convert TimeSlot to DTO
      */
     private TimeSlotDto toSlotDto(TimeSlot slot) {
+        String doctorName = null;
+        String doctorAvatar = null;
+        
+        try {
+            List<java.util.Map<String, Object>> doctor = jdbcTemplate.queryForList(
+                    "SELECT full_name, avatar_url FROM doctors WHERE id = ?", slot.getDoctorId());
+            if (!doctor.isEmpty()) {
+                doctorName = (String) doctor.get(0).get("full_name");
+                doctorAvatar = (String) doctor.get(0).get("avatar_url");
+            }
+        } catch (Exception e) {
+            log.warn("Could not fetch doctor info for slot {}: {}", slot.getId(), e.getMessage());
+        }
+        
         return TimeSlotDto.builder()
                 .id(slot.getId())
                 .doctorId(slot.getDoctorId())
+                .doctorName(doctorName)
+                .doctorAvatar(doctorAvatar)
                 .date(slot.getDate())
                 .startTime(slot.getStartTime())
                 .endTime(slot.getEndTime())
@@ -488,6 +510,64 @@ public class BookingService {
     // ==================== ADMIN APPROVAL WORKFLOW ====================
 
     /**
+     * Lấy tất cả slots (Admin) - có thể filter theo status và khoảng ngày
+     */
+    public List<TimeSlotDto> getAllSlots(String status, LocalDate startDate, LocalDate endDate) {
+        List<TimeSlot> slots;
+        
+        // Filter by status if provided
+        if (status != null && !status.isEmpty()) {
+            try {
+                com.medibook.common.enums.SlotStatus slotStatus = 
+                    com.medibook.common.enums.SlotStatus.valueOf(status.toUpperCase());
+                slots = timeSlotRepository.findByStatus(slotStatus);
+            } catch (IllegalArgumentException e) {
+                log.warn("Invalid status filter: {}", status);
+                slots = timeSlotRepository.findAll();
+            }
+        } else {
+            slots = timeSlotRepository.findAll();
+        }
+        
+        // Filter by date range if provided
+        if (startDate != null && endDate != null) {
+            final LocalDate start = startDate;
+            final LocalDate end = endDate;
+            slots = slots.stream()
+                    .filter(s -> !s.getDate().isBefore(start) && !s.getDate().isAfter(end))
+                    .collect(Collectors.toList());
+        } else if (startDate != null) {
+            final LocalDate start = startDate;
+            slots = slots.stream()
+                    .filter(s -> !s.getDate().isBefore(start))
+                    .collect(Collectors.toList());
+        } else if (endDate != null) {
+            final LocalDate end = endDate;
+            slots = slots.stream()
+                    .filter(s -> !s.getDate().isAfter(end))
+                    .collect(Collectors.toList());
+        }
+        
+        // Sort by date desc, then startTime
+        slots.sort((a, b) -> {
+            int dateCompare = b.getDate().compareTo(a.getDate());
+            if (dateCompare != 0) return dateCompare;
+            return a.getStartTime().compareTo(b.getStartTime());
+        });
+        
+        return slots.stream()
+                .map(this::toSlotDto)
+                .collect(Collectors.toList());
+    }
+    
+    /**
+     * Backward compatible - Lấy tất cả slots (Admin) - chỉ filter theo status
+     */
+    public List<TimeSlotDto> getAllSlots(String status) {
+        return getAllSlots(status, null, null);
+    }
+
+    /**
      * Lấy danh sách slots đang chờ duyệt (Admin)
      */
     public List<TimeSlotDto> getPendingSlots() {
@@ -525,5 +605,49 @@ public class BookingService {
 
         log.info("Slot {} rejected", slotId);
         return toSlotDto(slot);
+    }
+
+    /**
+     * Duyệt nhiều slot cùng lúc (Admin)
+     */
+    @Transactional
+    public int approveBulkSlots(List<UUID> slotIds) {
+        int count = 0;
+        for (UUID slotId : slotIds) {
+            try {
+                TimeSlot slot = timeSlotRepository.findById(slotId).orElse(null);
+                if (slot != null && slot.getStatus() == com.medibook.common.enums.SlotStatus.PENDING) {
+                    slot.setStatus(com.medibook.common.enums.SlotStatus.APPROVED);
+                    timeSlotRepository.save(slot);
+                    count++;
+                }
+            } catch (Exception e) {
+                log.warn("Failed to approve slot {}: {}", slotId, e.getMessage());
+            }
+        }
+        log.info("Bulk approved {} slots", count);
+        return count;
+    }
+
+    /**
+     * Từ chối nhiều slot cùng lúc (Admin)
+     */
+    @Transactional
+    public int rejectBulkSlots(List<UUID> slotIds) {
+        int count = 0;
+        for (UUID slotId : slotIds) {
+            try {
+                TimeSlot slot = timeSlotRepository.findById(slotId).orElse(null);
+                if (slot != null && slot.getStatus() == com.medibook.common.enums.SlotStatus.PENDING) {
+                    slot.setStatus(com.medibook.common.enums.SlotStatus.REJECTED);
+                    timeSlotRepository.save(slot);
+                    count++;
+                }
+            } catch (Exception e) {
+                log.warn("Failed to reject slot {}: {}", slotId, e.getMessage());
+            }
+        }
+        log.info("Bulk rejected {} slots", count);
+        return count;
     }
 }

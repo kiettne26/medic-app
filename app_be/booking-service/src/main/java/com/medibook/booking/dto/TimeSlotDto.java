@@ -18,6 +18,10 @@ import java.util.UUID;
 public class TimeSlotDto {
     private UUID id;
     private UUID doctorId;
+    
+    // Thông tin bác sĩ (để hiển thị trên Admin)
+    private String doctorName;
+    private String doctorAvatar;
 
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate date;

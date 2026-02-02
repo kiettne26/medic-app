@@ -14,6 +14,7 @@ class DashboardDto with _$DashboardDto {
     @Default(0) int confirmedBookings,
     @Default(0) int completedBookings,
     @Default(0) int cancelledBookings,
+    @Default(0) int totalRevenue,
     @Default([]) List<TimeSeriesData> bookingsByDay,
     @Default([]) List<TimeSeriesData> bookingsByWeek,
     @Default([]) List<TimeSeriesData> bookingsByMonth,

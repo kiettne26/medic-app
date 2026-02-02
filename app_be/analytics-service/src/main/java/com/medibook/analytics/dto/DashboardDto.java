@@ -26,6 +26,9 @@ public class DashboardDto {
     private long completedBookings;
     private long cancelledBookings;
 
+    // Doanh thu (tính từ giá dịch vụ của bookings COMPLETED)
+    private long totalRevenue;
+
     // Thống kê theo thời gian (cho biểu đồ)
     private List<TimeSeriesData> bookingsByDay;
     private List<TimeSeriesData> bookingsByWeek;

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../data/dto/schedule_dto.dart';
+import '../data/schedule_pdf_service.dart';
 import 'schedule_controller.dart';
 
 class ScheduleScreen extends ConsumerStatefulWidget {
@@ -47,6 +48,8 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
   }
 
   Widget _buildHeader(ScheduleController controller) {
+    final state = ref.watch(scheduleControllerProvider);
+    
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -75,10 +78,11 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
           children: [
             // Nút In lịch
             OutlinedButton.icon(
-              onPressed: () {},
+              onPressed: state.slots.isEmpty ? null : () => _printSchedule(state),
               style: OutlinedButton.styleFrom(
                 foregroundColor: const Color(0xFF5E718D),
                 side: const BorderSide(color: borderColor),
+                disabledForegroundColor: const Color(0xFF9CA3AF),
                 padding: const EdgeInsets.symmetric(
                   horizontal: 16,
                   vertical: 12,
@@ -120,6 +124,26 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
         ),
       ],
     );
+  }
+
+  Future<void> _printSchedule(ScheduleState state) async {
+    try {
+      await SchedulePdfService.printSchedule(
+        slots: state.slots,
+        weekStart: state.weekStart,
+        weekEnd: state.weekDays.last,
+        weekDays: state.weekDays,
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Lỗi khi in lịch: $e'),
+            backgroundColor: dangerColor,
+          ),
+        );
+      }
+    }
   }
 
   Widget _buildCalendarContainer(

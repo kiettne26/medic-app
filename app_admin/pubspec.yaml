@@ -43,6 +43,14 @@ dependencies:
   cached_network_image: ^3.3.1
   image_picker: ^1.0.7
 
+  # WebSocket
+  stomp_dart_client: ^2.0.0
+  web_socket_channel: ^3.0.1
+
+  # PDF & Printing
+  pdf: ^3.11.1
+  printing: ^5.13.3
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

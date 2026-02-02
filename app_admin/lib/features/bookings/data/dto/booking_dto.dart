@@ -40,3 +40,36 @@ class TimeSlotDto with _$TimeSlotDto {
   factory TimeSlotDto.fromJson(Map<String, dynamic> json) =>
       _$TimeSlotDtoFromJson(json);
 }
+
+/// DTO cho thống kê lịch hẹn
+@freezed
+class BookingStatsDto with _$BookingStatsDto {
+  const factory BookingStatsDto({
+    @Default(0) int totalToday,
+    @Default(0) int pendingCount,
+    @Default(0) int confirmedCount,
+    @Default(0) int completedCount,
+    @Default(0) int canceledCount,
+    @Default(0.0) double todayChangePercent,
+    @Default(0.0) double pendingChangePercent,
+    @Default(0.0) double completedChangePercent,
+  }) = _BookingStatsDto;
+
+  factory BookingStatsDto.fromJson(Map<String, dynamic> json) =>
+      _$BookingStatsDtoFromJson(json);
+}
+
+/// DTO cho danh sách booking với phân trang
+@freezed
+class BookingPageDto with _$BookingPageDto {
+  const factory BookingPageDto({
+    required List<BookingDto> content,
+    @Default(0) int totalElements,
+    @Default(0) int totalPages,
+    @Default(0) int currentPage,
+    @Default(10) int pageSize,
+  }) = _BookingPageDto;
+
+  factory BookingPageDto.fromJson(Map<String, dynamic> json) =>
+      _$BookingPageDtoFromJson(json);
+}

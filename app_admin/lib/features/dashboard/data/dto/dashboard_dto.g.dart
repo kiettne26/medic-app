@@ -16,6 +16,7 @@ _$DashboardDtoImpl _$$DashboardDtoImplFromJson(Map<String, dynamic> json) =>
       confirmedBookings: (json['confirmedBookings'] as num?)?.toInt() ?? 0,
       completedBookings: (json['completedBookings'] as num?)?.toInt() ?? 0,
       cancelledBookings: (json['cancelledBookings'] as num?)?.toInt() ?? 0,
+      totalRevenue: (json['totalRevenue'] as num?)?.toInt() ?? 0,
       bookingsByDay:
           (json['bookingsByDay'] as List<dynamic>?)
               ?.map((e) => TimeSeriesData.fromJson(e as Map<String, dynamic>))
@@ -53,6 +54,7 @@ Map<String, dynamic> _$$DashboardDtoImplToJson(_$DashboardDtoImpl instance) =>
       'confirmedBookings': instance.confirmedBookings,
       'completedBookings': instance.completedBookings,
       'cancelledBookings': instance.cancelledBookings,
+      'totalRevenue': instance.totalRevenue,
       'bookingsByDay': instance.bookingsByDay,
       'bookingsByWeek': instance.bookingsByWeek,
       'bookingsByMonth': instance.bookingsByMonth,

@@ -742,3 +742,602 @@ abstract class _TimeSlotDto implements TimeSlotDto {
   _$$TimeSlotDtoImplCopyWith<_$TimeSlotDtoImpl> get copyWith =>
       throw _privateConstructorUsedError;
 }
+
+BookingStatsDto _$BookingStatsDtoFromJson(Map<String, dynamic> json) {
+  return _BookingStatsDto.fromJson(json);
+}
+
+/// @nodoc
+mixin _$BookingStatsDto {
+  int get totalToday => throw _privateConstructorUsedError;
+  int get pendingCount => throw _privateConstructorUsedError;
+  int get confirmedCount => throw _privateConstructorUsedError;
+  int get completedCount => throw _privateConstructorUsedError;
+  int get canceledCount => throw _privateConstructorUsedError;
+  double get todayChangePercent => throw _privateConstructorUsedError;
+  double get pendingChangePercent => throw _privateConstructorUsedError;
+  double get completedChangePercent => throw _privateConstructorUsedError;
+
+  /// Serializes this BookingStatsDto to a JSON map.
+  Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
+
+  /// Create a copy of BookingStatsDto
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  $BookingStatsDtoCopyWith<BookingStatsDto> get copyWith =>
+      throw _privateConstructorUsedError;
+}
+
+/// @nodoc
+abstract class $BookingStatsDtoCopyWith<$Res> {
+  factory $BookingStatsDtoCopyWith(
+    BookingStatsDto value,
+    $Res Function(BookingStatsDto) then,
+  ) = _$BookingStatsDtoCopyWithImpl<$Res, BookingStatsDto>;
+  @useResult
+  $Res call({
+    int totalToday,
+    int pendingCount,
+    int confirmedCount,
+    int completedCount,
+    int canceledCount,
+    double todayChangePercent,
+    double pendingChangePercent,
+    double completedChangePercent,
+  });
+}
+
+/// @nodoc
+class _$BookingStatsDtoCopyWithImpl<$Res, $Val extends BookingStatsDto>
+    implements $BookingStatsDtoCopyWith<$Res> {
+  _$BookingStatsDtoCopyWithImpl(this._value, this._then);
+
+  // ignore: unused_field
+  final $Val _value;
+  // ignore: unused_field
+  final $Res Function($Val) _then;
+
+  /// Create a copy of BookingStatsDto
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({
+    Object? totalToday = null,
+    Object? pendingCount = null,
+    Object? confirmedCount = null,
+    Object? completedCount = null,
+    Object? canceledCount = null,
+    Object? todayChangePercent = null,
+    Object? pendingChangePercent = null,
+    Object? completedChangePercent = null,
+  }) {
+    return _then(
+      _value.copyWith(
+            totalToday: null == totalToday
+                ? _value.totalToday
+                : totalToday // ignore: cast_nullable_to_non_nullable
+                      as int,
+            pendingCount: null == pendingCount
+                ? _value.pendingCount
+                : pendingCount // ignore: cast_nullable_to_non_nullable
+                      as int,
+            confirmedCount: null == confirmedCount
+                ? _value.confirmedCount
+                : confirmedCount // ignore: cast_nullable_to_non_nullable
+                      as int,
+            completedCount: null == completedCount
+                ? _value.completedCount
+                : completedCount // ignore: cast_nullable_to_non_nullable
+                      as int,
+            canceledCount: null == canceledCount
+                ? _value.canceledCount
+                : canceledCount // ignore: cast_nullable_to_non_nullable
+                      as int,
+            todayChangePercent: null == todayChangePercent
+                ? _value.todayChangePercent
+                : todayChangePercent // ignore: cast_nullable_to_non_nullable
+                      as double,
+            pendingChangePercent: null == pendingChangePercent
+                ? _value.pendingChangePercent
+                : pendingChangePercent // ignore: cast_nullable_to_non_nullable
+                      as double,
+            completedChangePercent: null == completedChangePercent
+                ? _value.completedChangePercent
+                : completedChangePercent // ignore: cast_nullable_to_non_nullable
+                      as double,
+          )
+          as $Val,
+    );
+  }
+}
+
+/// @nodoc
+abstract class _$$BookingStatsDtoImplCopyWith<$Res>
+    implements $BookingStatsDtoCopyWith<$Res> {
+  factory _$$BookingStatsDtoImplCopyWith(
+    _$BookingStatsDtoImpl value,
+    $Res Function(_$BookingStatsDtoImpl) then,
+  ) = __$$BookingStatsDtoImplCopyWithImpl<$Res>;
+  @override
+  @useResult
+  $Res call({
+    int totalToday,
+    int pendingCount,
+    int confirmedCount,
+    int completedCount,
+    int canceledCount,
+    double todayChangePercent,
+    double pendingChangePercent,
+    double completedChangePercent,
+  });
+}
+
+/// @nodoc
+class __$$BookingStatsDtoImplCopyWithImpl<$Res>
+    extends _$BookingStatsDtoCopyWithImpl<$Res, _$BookingStatsDtoImpl>
+    implements _$$BookingStatsDtoImplCopyWith<$Res> {
+  __$$BookingStatsDtoImplCopyWithImpl(
+    _$BookingStatsDtoImpl _value,
+    $Res Function(_$BookingStatsDtoImpl) _then,
+  ) : super(_value, _then);
+
+  /// Create a copy of BookingStatsDto
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({
+    Object? totalToday = null,
+    Object? pendingCount = null,
+    Object? confirmedCount = null,
+    Object? completedCount = null,
+    Object? canceledCount = null,
+    Object? todayChangePercent = null,
+    Object? pendingChangePercent = null,
+    Object? completedChangePercent = null,
+  }) {
+    return _then(
+      _$BookingStatsDtoImpl(
+        totalToday: null == totalToday
+            ? _value.totalToday
+            : totalToday // ignore: cast_nullable_to_non_nullable
+                  as int,
+        pendingCount: null == pendingCount
+            ? _value.pendingCount
+            : pendingCount // ignore: cast_nullable_to_non_nullable
+                  as int,
+        confirmedCount: null == confirmedCount
+            ? _value.confirmedCount
+            : confirmedCount // ignore: cast_nullable_to_non_nullable
+                  as int,
+        completedCount: null == completedCount
+            ? _value.completedCount
+            : completedCount // ignore: cast_nullable_to_non_nullable
+                  as int,
+        canceledCount: null == canceledCount
+            ? _value.canceledCount
+            : canceledCount // ignore: cast_nullable_to_non_nullable
+                  as int,
+        todayChangePercent: null == todayChangePercent
+            ? _value.todayChangePercent
+            : todayChangePercent // ignore: cast_nullable_to_non_nullable
+                  as double,
+        pendingChangePercent: null == pendingChangePercent
+            ? _value.pendingChangePercent
+            : pendingChangePercent // ignore: cast_nullable_to_non_nullable
+                  as double,
+        completedChangePercent: null == completedChangePercent
+            ? _value.completedChangePercent
+            : completedChangePercent // ignore: cast_nullable_to_non_nullable
+                  as double,
+      ),
+    );
+  }
+}
+
+/// @nodoc
+@JsonSerializable()
+class _$BookingStatsDtoImpl implements _BookingStatsDto {
+  const _$BookingStatsDtoImpl({
+    this.totalToday = 0,
+    this.pendingCount = 0,
+    this.confirmedCount = 0,
+    this.completedCount = 0,
+    this.canceledCount = 0,
+    this.todayChangePercent = 0.0,
+    this.pendingChangePercent = 0.0,
+    this.completedChangePercent = 0.0,
+  });
+
+  factory _$BookingStatsDtoImpl.fromJson(Map<String, dynamic> json) =>
+      _$$BookingStatsDtoImplFromJson(json);
+
+  @override
+  @JsonKey()
+  final int totalToday;
+  @override
+  @JsonKey()
+  final int pendingCount;
+  @override
+  @JsonKey()
+  final int confirmedCount;
+  @override
+  @JsonKey()
+  final int completedCount;
+  @override
+  @JsonKey()
+  final int canceledCount;
+  @override
+  @JsonKey()
+  final double todayChangePercent;
+  @override
+  @JsonKey()
+  final double pendingChangePercent;
+  @override
+  @JsonKey()
+  final double completedChangePercent;
+
+  @override
+  String toString() {
+    return 'BookingStatsDto(totalToday: $totalToday, pendingCount: $pendingCount, confirmedCount: $confirmedCount, completedCount: $completedCount, canceledCount: $canceledCount, todayChangePercent: $todayChangePercent, pendingChangePercent: $pendingChangePercent, completedChangePercent: $completedChangePercent)';
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is _$BookingStatsDtoImpl &&
+            (identical(other.totalToday, totalToday) ||
+                other.totalToday == totalToday) &&
+            (identical(other.pendingCount, pendingCount) ||
+                other.pendingCount == pendingCount) &&
+            (identical(other.confirmedCount, confirmedCount) ||
+                other.confirmedCount == confirmedCount) &&
+            (identical(other.completedCount, completedCount) ||
+                other.completedCount == completedCount) &&
+            (identical(other.canceledCount, canceledCount) ||
+                other.canceledCount == canceledCount) &&
+            (identical(other.todayChangePercent, todayChangePercent) ||
+                other.todayChangePercent == todayChangePercent) &&
+            (identical(other.pendingChangePercent, pendingChangePercent) ||
+                other.pendingChangePercent == pendingChangePercent) &&
+            (identical(other.completedChangePercent, completedChangePercent) ||
+                other.completedChangePercent == completedChangePercent));
+  }
+
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @override
+  int get hashCode => Object.hash(
+    runtimeType,
+    totalToday,
+    pendingCount,
+    confirmedCount,
+    completedCount,
+    canceledCount,
+    todayChangePercent,
+    pendingChangePercent,
+    completedChangePercent,
+  );
+
+  /// Create a copy of BookingStatsDto
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @override
+  @pragma('vm:prefer-inline')
+  _$$BookingStatsDtoImplCopyWith<_$BookingStatsDtoImpl> get copyWith =>
+      __$$BookingStatsDtoImplCopyWithImpl<_$BookingStatsDtoImpl>(
+        this,
+        _$identity,
+      );
+
+  @override
+  Map<String, dynamic> toJson() {
+    return _$$BookingStatsDtoImplToJson(this);
+  }
+}
+
+abstract class _BookingStatsDto implements BookingStatsDto {
+  const factory _BookingStatsDto({
+    final int totalToday,
+    final int pendingCount,
+    final int confirmedCount,
+    final int completedCount,
+    final int canceledCount,
+    final double todayChangePercent,
+    final double pendingChangePercent,
+    final double completedChangePercent,
+  }) = _$BookingStatsDtoImpl;
+
+  factory _BookingStatsDto.fromJson(Map<String, dynamic> json) =
+      _$BookingStatsDtoImpl.fromJson;
+
+  @override
+  int get totalToday;
+  @override
+  int get pendingCount;
+  @override
+  int get confirmedCount;
+  @override
+  int get completedCount;
+  @override
+  int get canceledCount;
+  @override
+  double get todayChangePercent;
+  @override
+  double get pendingChangePercent;
+  @override
+  double get completedChangePercent;
+
+  /// Create a copy of BookingStatsDto
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  _$$BookingStatsDtoImplCopyWith<_$BookingStatsDtoImpl> get copyWith =>
+      throw _privateConstructorUsedError;
+}
+
+BookingPageDto _$BookingPageDtoFromJson(Map<String, dynamic> json) {
+  return _BookingPageDto.fromJson(json);
+}
+
+/// @nodoc
+mixin _$BookingPageDto {
+  List<BookingDto> get content => throw _privateConstructorUsedError;
+  int get totalElements => throw _privateConstructorUsedError;
+  int get totalPages => throw _privateConstructorUsedError;
+  int get currentPage => throw _privateConstructorUsedError;
+  int get pageSize => throw _privateConstructorUsedError;
+
+  /// Serializes this BookingPageDto to a JSON map.
+  Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
+
+  /// Create a copy of BookingPageDto
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  $BookingPageDtoCopyWith<BookingPageDto> get copyWith =>
+      throw _privateConstructorUsedError;
+}
+
+/// @nodoc
+abstract class $BookingPageDtoCopyWith<$Res> {
+  factory $BookingPageDtoCopyWith(
+    BookingPageDto value,
+    $Res Function(BookingPageDto) then,
+  ) = _$BookingPageDtoCopyWithImpl<$Res, BookingPageDto>;
+  @useResult
+  $Res call({
+    List<BookingDto> content,
+    int totalElements,
+    int totalPages,
+    int currentPage,
+    int pageSize,
+  });
+}
+
+/// @nodoc
+class _$BookingPageDtoCopyWithImpl<$Res, $Val extends BookingPageDto>
+    implements $BookingPageDtoCopyWith<$Res> {
+  _$BookingPageDtoCopyWithImpl(this._value, this._then);
+
+  // ignore: unused_field
+  final $Val _value;
+  // ignore: unused_field
+  final $Res Function($Val) _then;
+
+  /// Create a copy of BookingPageDto
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({
+    Object? content = null,
+    Object? totalElements = null,
+    Object? totalPages = null,
+    Object? currentPage = null,
+    Object? pageSize = null,
+  }) {
+    return _then(
+      _value.copyWith(
+            content: null == content
+                ? _value.content
+                : content // ignore: cast_nullable_to_non_nullable
+                      as List<BookingDto>,
+            totalElements: null == totalElements
+                ? _value.totalElements
+                : totalElements // ignore: cast_nullable_to_non_nullable
+                      as int,
+            totalPages: null == totalPages
+                ? _value.totalPages
+                : totalPages // ignore: cast_nullable_to_non_nullable
+                      as int,
+            currentPage: null == currentPage
+                ? _value.currentPage
+                : currentPage // ignore: cast_nullable_to_non_nullable
+                      as int,
+            pageSize: null == pageSize
+                ? _value.pageSize
+                : pageSize // ignore: cast_nullable_to_non_nullable
+                      as int,
+          )
+          as $Val,
+    );
+  }
+}
+
+/// @nodoc
+abstract class _$$BookingPageDtoImplCopyWith<$Res>
+    implements $BookingPageDtoCopyWith<$Res> {
+  factory _$$BookingPageDtoImplCopyWith(
+    _$BookingPageDtoImpl value,
+    $Res Function(_$BookingPageDtoImpl) then,
+  ) = __$$BookingPageDtoImplCopyWithImpl<$Res>;
+  @override
+  @useResult
+  $Res call({
+    List<BookingDto> content,
+    int totalElements,
+    int totalPages,
+    int currentPage,
+    int pageSize,
+  });
+}
+
+/// @nodoc
+class __$$BookingPageDtoImplCopyWithImpl<$Res>
+    extends _$BookingPageDtoCopyWithImpl<$Res, _$BookingPageDtoImpl>
+    implements _$$BookingPageDtoImplCopyWith<$Res> {
+  __$$BookingPageDtoImplCopyWithImpl(
+    _$BookingPageDtoImpl _value,
+    $Res Function(_$BookingPageDtoImpl) _then,
+  ) : super(_value, _then);
+
+  /// Create a copy of BookingPageDto
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({
+    Object? content = null,
+    Object? totalElements = null,
+    Object? totalPages = null,
+    Object? currentPage = null,
+    Object? pageSize = null,
+  }) {
+    return _then(
+      _$BookingPageDtoImpl(
+        content: null == content
+            ? _value._content
+            : content // ignore: cast_nullable_to_non_nullable
+                  as List<BookingDto>,
+        totalElements: null == totalElements
+            ? _value.totalElements
+            : totalElements // ignore: cast_nullable_to_non_nullable
+                  as int,
+        totalPages: null == totalPages
+            ? _value.totalPages
+            : totalPages // ignore: cast_nullable_to_non_nullable
+                  as int,
+        currentPage: null == currentPage
+            ? _value.currentPage
+            : currentPage // ignore: cast_nullable_to_non_nullable
+                  as int,
+        pageSize: null == pageSize
+            ? _value.pageSize
+            : pageSize // ignore: cast_nullable_to_non_nullable
+                  as int,
+      ),
+    );
+  }
+}
+
+/// @nodoc
+@JsonSerializable()
+class _$BookingPageDtoImpl implements _BookingPageDto {
+  const _$BookingPageDtoImpl({
+    required final List<BookingDto> content,
+    this.totalElements = 0,
+    this.totalPages = 0,
+    this.currentPage = 0,
+    this.pageSize = 10,
+  }) : _content = content;
+
+  factory _$BookingPageDtoImpl.fromJson(Map<String, dynamic> json) =>
+      _$$BookingPageDtoImplFromJson(json);
+
+  final List<BookingDto> _content;
+  @override
+  List<BookingDto> get content {
+    if (_content is EqualUnmodifiableListView) return _content;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(_content);
+  }
+
+  @override
+  @JsonKey()
+  final int totalElements;
+  @override
+  @JsonKey()
+  final int totalPages;
+  @override
+  @JsonKey()
+  final int currentPage;
+  @override
+  @JsonKey()
+  final int pageSize;
+
+  @override
+  String toString() {
+    return 'BookingPageDto(content: $content, totalElements: $totalElements, totalPages: $totalPages, currentPage: $currentPage, pageSize: $pageSize)';
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is _$BookingPageDtoImpl &&
+            const DeepCollectionEquality().equals(other._content, _content) &&
+            (identical(other.totalElements, totalElements) ||
+                other.totalElements == totalElements) &&
+            (identical(other.totalPages, totalPages) ||
+                other.totalPages == totalPages) &&
+            (identical(other.currentPage, currentPage) ||
+                other.currentPage == currentPage) &&
+            (identical(other.pageSize, pageSize) ||
+                other.pageSize == pageSize));
+  }
+
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @override
+  int get hashCode => Object.hash(
+    runtimeType,
+    const DeepCollectionEquality().hash(_content),
+    totalElements,
+    totalPages,
+    currentPage,
+    pageSize,
+  );
+
+  /// Create a copy of BookingPageDto
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @override
+  @pragma('vm:prefer-inline')
+  _$$BookingPageDtoImplCopyWith<_$BookingPageDtoImpl> get copyWith =>
+      __$$BookingPageDtoImplCopyWithImpl<_$BookingPageDtoImpl>(
+        this,
+        _$identity,
+      );
+
+  @override
+  Map<String, dynamic> toJson() {
+    return _$$BookingPageDtoImplToJson(this);
+  }
+}
+
+abstract class _BookingPageDto implements BookingPageDto {
+  const factory _BookingPageDto({
+    required final List<BookingDto> content,
+    final int totalElements,
+    final int totalPages,
+    final int currentPage,
+    final int pageSize,
+  }) = _$BookingPageDtoImpl;
+
+  factory _BookingPageDto.fromJson(Map<String, dynamic> json) =
+      _$BookingPageDtoImpl.fromJson;
+
+  @override
+  List<BookingDto> get content;
+  @override
+  int get totalElements;
+  @override
+  int get totalPages;
+  @override
+  int get currentPage;
+  @override
+  int get pageSize;
+
+  /// Create a copy of BookingPageDto
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  _$$BookingPageDtoImplCopyWith<_$BookingPageDtoImpl> get copyWith =>
+      throw _privateConstructorUsedError;
+}

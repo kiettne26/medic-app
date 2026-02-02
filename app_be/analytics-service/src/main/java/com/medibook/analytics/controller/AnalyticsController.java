@@ -26,9 +26,11 @@ public class AnalyticsController {
     private final AnalyticsService analyticsService;
 
     @GetMapping("/dashboard")
-    @Operation(summary = "Lấy thống kê tổng quan cho dashboard")
-    public ResponseEntity<ApiResponse<DashboardDto>> getDashboard() {
-        DashboardDto dashboard = analyticsService.getDashboardStats();
+    @Operation(summary = "Lấy thống kê tổng quan cho dashboard với filter theo ngày")
+    public ResponseEntity<ApiResponse<DashboardDto>> getDashboard(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
+        DashboardDto dashboard = analyticsService.getDashboardStats(startDate, endDate);
         return ResponseEntity.ok(ApiResponse.success(dashboard));
     }
 
@@ -38,15 +40,17 @@ public class AnalyticsController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
             @RequestParam(defaultValue = "DAY") String groupBy) {
-        // TODO: Implement với actual data
-        return ResponseEntity.ok(ApiResponse.success(List.of()));
+        List<DashboardDto.TimeSeriesData> data = analyticsService.getBookingsByPeriod(startDate, endDate, groupBy);
+        return ResponseEntity.ok(ApiResponse.success(data));
     }
 
     @GetMapping("/doctors/rankings")
     @Operation(summary = "Xếp hạng bác sĩ")
     public ResponseEntity<ApiResponse<List<DashboardDto.DoctorStats>>> getDoctorRankings(
-            @RequestParam(defaultValue = "10") int limit) {
-        // TODO: Implement với actual data
-        return ResponseEntity.ok(ApiResponse.success(List.of()));
+            @RequestParam(defaultValue = "10") int limit,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
+        List<DashboardDto.DoctorStats> rankings = analyticsService.getTopDoctors(limit, startDate, endDate);
+        return ResponseEntity.ok(ApiResponse.success(rankings));
     }
 }
