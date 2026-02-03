@@ -21,8 +21,7 @@ import java.util.UUID;
 public interface TimeSlotRepository extends JpaRepository<TimeSlot, UUID> {
 
     /**
-     * 🔐 PESSIMISTIC LOCK - Quan trọng nhất!
-     * Lock row khi đọc để chống race condition
+     * PESSIMISTIC LOCK
      */
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT t FROM TimeSlot t WHERE t.id = :id")
