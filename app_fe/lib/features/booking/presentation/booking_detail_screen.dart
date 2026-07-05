@@ -350,6 +350,13 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
                   ),
                   const Divider(height: 24),
                   _buildInfoRow(
+                    Icons.location_on_outlined,
+                    'Địa điểm khám',
+                    'Phòng khám Đa khoa MediBook - 123 Đường Thành Thái, Phường 14, Quận 10, TP. Hồ Chí Minh',
+                    Colors.green,
+                  ),
+                  const Divider(height: 24),
+                  _buildInfoRow(
                     Icons.medical_services,
                     'Dịch vụ',
                     booking.serviceName ?? 'N/A',

@@ -583,6 +583,25 @@ class _BookingScreenState extends ConsumerState<BookingScreen>
                           ),
                         ],
                       ),
+                      const SizedBox(height: 4),
+                      const Row(
+                        children: [
+                          Icon(
+                            Icons.location_on_outlined,
+                            size: 18,
+                            color: Color(0xFF297EFF),
+                          ),
+                          SizedBox(width: 8),
+                          Text(
+                            'PK Đa khoa MediBook',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                              color: Color(0xFF4B5563),
+                            ),
+                          ),
+                        ],
+                      ),
                     ],
                   ),
                   if (!isPast && status != 'CANCELED' && status != 'CANCELLED')

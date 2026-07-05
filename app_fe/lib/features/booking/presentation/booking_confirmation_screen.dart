@@ -397,6 +397,13 @@ class _BookingConfirmationScreenState
             widget.selectedTime,
             Colors.orange,
           ),
+          const Divider(height: 24),
+          _buildInfoRow(
+            Icons.location_on_outlined,
+            'Địa điểm khám',
+            'Phòng khám Đa khoa MediBook - 123 Đường Thành Thái, Phường 14, Quận 10, TP. Hồ Chí Minh',
+            Colors.green,
+          ),
         ],
       ),
     );

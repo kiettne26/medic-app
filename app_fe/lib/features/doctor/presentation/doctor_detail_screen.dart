@@ -809,139 +809,27 @@ class _DoctorDetailScreenState extends ConsumerState<DoctorDetailScreen> {
               ),
             )
           else if (_reviews.isEmpty)
-            Column(
-              children: [
-                _buildMockReviewCard(
-                  name: 'Trần Hoàng Minh',
-                  timeAgo: '2 ngày trước',
-                  rating: 5.0,
-                  comment: 'Bác sĩ tư vấn rất kỹ và dễ hiểu. Thủ tục đặt lịch qua app cũng rất nhanh chóng. Rất hài lòng với dịch vụ.',
-                  avatarUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBcZUexk8XEtJN5iGb3JmQKo7tFFyxBYkYVvy_zvg3M6YkK-6pGMtFIRWUnmVocrfJKiqM5qdqDduvh8Rn0xtru7JvONY8P33Gg13RQRzSWHKQ8gLHho_9IbyHEbC3QdEsJHVu549DI79wPCMwev2w53t4moJVw2JB1CTa4wd23zPDGPOEmuptGg-w4FXpE90cddfHxLJ39UECbibv_HKEZCrxsM7lc1E2dHAxF0Wtjy_RZIWE7ze-7lQes4CTXHftwaaEN1_2vjLw',
-                ),
-                const SizedBox(height: 12),
-                _buildMockReviewCard(
-                  name: 'Lê Thị Mai',
-                  timeAgo: '1 tuần trước',
-                  rating: 4.5,
-                  comment: 'Bác sĩ nhiệt tình, phòng khám sạch sẽ. Sẽ quay lại nếu có nhu cầu.',
-                  avatarUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAB9i7qflwiTifCtsSd40mEuQtk4flaLBLv-PmtZhGx_21WxBwNZXKNlZYDh9x3tJt7v36D0_oZr437RrVPzLgL50mOcJtuvlHRUBINcIScodDabsuuKyfo1idnI8kby2dOKBmpQK1ODUD5hlUFx30KKbE1D5a6GQbSl89i2BxPf57TphvSJX3F-kqdFnP1Auz-KN96ncYV6LVxlCwWPo4p01S-0zZJS-7ZNU16-8KScH-nfRA1-GJT5r9Zi-Nr1QWNLNHM5vrcOfY',
-                ),
-              ],
-            )
-          else
-            ..._reviews.take(3).map((review) => _buildReviewCard(review)),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMockReviewCard({
-    required String name,
-    required String timeAgo,
-    required double rating,
-    required String comment,
-    required String avatarUrl,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF5F7F8),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFDADFE7), width: 1),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 24),
+              alignment: Alignment.center,
+              child: const Column(
                 children: [
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: const BoxDecoration(
-                      shape: BoxShape.circle,
-                    ),
-                    child: ClipOval(
-                      child: CachedNetworkImage(
-                        imageUrl: avatarUrl,
-                        fit: BoxFit.cover,
-                        placeholder: (context, url) => const Center(
-                          child: SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          ),
-                        ),
-                        errorWidget: (context, url, error) => Container(
-                          color: const Color(0xFF297EFF).withOpacity(0.1),
-                          child: const Icon(
-                            Icons.person,
-                            size: 20,
-                            color: Color(0xFF297EFF),
-                          ),
-                        ),
-                      ),
-                    ),
+                  Icon(
+                    Icons.rate_review_outlined,
+                    size: 40,
+                    color: Color(0xFF5E718D),
                   ),
-                  const SizedBox(width: 12),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        name,
-                        style: const TextStyle(
-                          color: Color(0xFF101418),
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        timeAgo,
-                        style: const TextStyle(
-                          color: Color(0xFF5E718D),
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
+                  SizedBox(height: 8),
+                  Text(
+                    'Bác sĩ chưa có đánh giá nào.',
+                    style: TextStyle(color: Color(0xFF5E718D), fontSize: 14),
                   ),
                 ],
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Colors.orange.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.star, size: 14, color: Colors.orange),
-                    const SizedBox(width: 4),
-                    Text(
-                      rating.toString(),
-                      style: const TextStyle(
-                        color: Colors.orange,
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Text(
-            comment,
-            style: const TextStyle(
-              color: Color(0xFF5E718D),
-              fontSize: 14,
-              height: 1.5,
-            ),
-          ),
+            )
+          else
+            ..._reviews.take(3).map((review) => _buildReviewCard(review)),
         ],
       ),
     );
@@ -1060,6 +948,45 @@ class _DoctorDetailScreenState extends ConsumerState<DoctorDetailScreen> {
                 color: Color(0xFF5E718D),
                 fontSize: 14,
                 height: 1.5,
+              ),
+            ),
+          ],
+          if (review.doctorReply != null && review.doctorReply!.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFFDADFE7), width: 1),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.reply, size: 16, color: Color(0xFF297EFF)),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Phản hồi của bác sĩ',
+                        style: const TextStyle(
+                          color: Color(0xFF297EFF),
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    review.doctorReply!,
+                    style: const TextStyle(
+                      color: Color(0xFF101418),
+                      fontSize: 13,
+                      height: 1.4,
+                    ),
+                  ),
+                ],
               ),
             ),
           ],

@@ -12,6 +12,8 @@ class ReviewDto {
   final String? patientAvatar;
   final int rating;
   final String? comment;
+  final String? doctorReply;
+  final DateTime? doctorReplyAt;
   final DateTime? createdAt;
 
   ReviewDto({
@@ -23,6 +25,8 @@ class ReviewDto {
     this.patientAvatar,
     required this.rating,
     this.comment,
+    this.doctorReply,
+    this.doctorReplyAt,
     this.createdAt,
   });
 

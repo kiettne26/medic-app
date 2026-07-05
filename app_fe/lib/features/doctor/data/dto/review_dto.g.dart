@@ -15,6 +15,10 @@ ReviewDto _$ReviewDtoFromJson(Map<String, dynamic> json) => ReviewDto(
       patientAvatar: json['patientAvatar'] as String?,
       rating: (json['rating'] as num).toInt(),
       comment: json['comment'] as String?,
+      doctorReply: json['doctorReply'] as String?,
+      doctorReplyAt: json['doctorReplyAt'] == null
+          ? null
+          : DateTime.parse(json['doctorReplyAt'] as String),
       createdAt: json['createdAt'] == null
           ? null
           : DateTime.parse(json['createdAt'] as String),
@@ -29,5 +33,7 @@ Map<String, dynamic> _$ReviewDtoToJson(ReviewDto instance) => <String, dynamic>{
       'patientAvatar': instance.patientAvatar,
       'rating': instance.rating,
       'comment': instance.comment,
+      'doctorReply': instance.doctorReply,
+      'doctorReplyAt': instance.doctorReplyAt?.toIso8601String(),
       'createdAt': instance.createdAt?.toIso8601String(),
     };
