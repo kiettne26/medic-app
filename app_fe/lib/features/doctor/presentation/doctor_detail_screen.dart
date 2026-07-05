@@ -180,6 +180,83 @@ class _DoctorDetailScreenState extends ConsumerState<DoctorDetailScreen> {
     );
   }
 
+  int _extractExperienceYears(String? description) {
+    if (description == null || description.isEmpty) return 10;
+    
+    final normalized = description.toLowerCase();
+    
+    final regex = RegExp(r'(\d+)\s*(năm|nam)\s*(kinh\s*nghiệm|kinh\s*nghiem)?');
+    final match = regex.firstMatch(normalized);
+    if (match != null) {
+      final yearsStr = match.group(1);
+      if (yearsStr != null) {
+        final years = int.tryParse(yearsStr);
+        if (years != null) return years;
+      }
+    }
+    
+    final backupRegex = RegExp(r'(\d+)\s*(năm|nam)');
+    final backupMatch = backupRegex.firstMatch(normalized);
+    if (backupMatch != null) {
+      final yearsStr = backupMatch.group(1);
+      if (yearsStr != null) {
+        final years = int.tryParse(yearsStr);
+        if (years != null) return years;
+      }
+    }
+    
+    return 10;
+  }
+
+  List<_ExperienceItem> _getExperienceTimeline(DoctorDto doctor) {
+    final specialty = doctor.specialty ?? 'Tim mạch';
+    final description = doctor.description ?? '';
+    final years = _extractExperienceYears(description);
+    final currentYear = DateTime.now().year;
+    
+    List<_ExperienceItem> items = [];
+    
+    if (description.contains('Nhi Đồng 1') || description.contains('Nhi Dong 1')) {
+      items.add(_ExperienceItem(
+        'Bác sĩ chuyên khoa Nhi',
+        'Bệnh viện Nhi Đồng 1 • ${currentYear - years} - Hiện tại',
+      ));
+      if (description.contains('ĐH Y Hà Nội') || description.contains('Dai hoc Y Ha Noi') || description.contains('ĐH Y HN')) {
+        items.add(_ExperienceItem(
+          'Tốt nghiệp Bác sĩ Y khoa',
+          'Đại học Y Hà Nội • ${currentYear - years - 6} - ${currentYear - years}',
+        ));
+      } else {
+        items.add(_ExperienceItem(
+          'Tốt nghiệp Bác sĩ Đa khoa',
+          'Đại học Y Dược TP.HCM • ${currentYear - years - 6} - ${currentYear - years}',
+        ));
+      }
+    } else if (description.contains('Chợ Rẫy') || description.contains('Cho Ray')) {
+      items.add(_ExperienceItem(
+        'Bác sĩ chuyên khoa $specialty',
+        'Bệnh viện Chợ Rẫy • ${currentYear - years + 4} - Hiện tại',
+      ));
+      if (description.contains('Đại học Y Dược') || description.contains('Dai hoc Y Duoc')) {
+        items.add(_ExperienceItem(
+          'Bác sĩ nội trú / Học viên cao học',
+          'Đại học Y Dược TP.HCM • ${currentYear - years} - ${currentYear - years + 4}',
+        ));
+      }
+    } else {
+      items.add(_ExperienceItem(
+        'Bác sĩ chuyên khoa $specialty',
+        'Bệnh viện chuyên khoa uy tín • ${currentYear - years + 4} - Hiện tại',
+      ));
+      items.add(_ExperienceItem(
+        'Bác sĩ nội trú / Bác sĩ đa khoa',
+        'Đại học Y Dược TP.HCM • ${currentYear - years} - ${currentYear - years + 4}',
+      ));
+    }
+    
+    return items;
+  }
+
   Widget _buildHeader(BuildContext context) {
     return Container(
       padding: EdgeInsets.only(
@@ -400,6 +477,8 @@ class _DoctorDetailScreenState extends ConsumerState<DoctorDetailScreen> {
         ? doctor.rating!.toStringAsFixed(1)
         : '0.0';
 
+    final years = _extractExperienceYears(doctor.description);
+
     return Container(
       color: Colors.white,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
@@ -419,7 +498,7 @@ class _DoctorDetailScreenState extends ConsumerState<DoctorDetailScreen> {
             iconColor: const Color(0xFF00C853),
             bgColor: const Color(0xFF00C853).withOpacity(0.05),
             borderColor: const Color(0xFF00C853).withOpacity(0.1),
-            value: '10 năm',
+            value: '$years năm',
             label: 'Kinh nghiệm',
           ),
           const SizedBox(width: 12),
@@ -567,7 +646,9 @@ class _DoctorDetailScreenState extends ConsumerState<DoctorDetailScreen> {
   }
 
   Widget _buildExperienceSection(DoctorDto doctor) {
-    final specialty = doctor.specialty ?? 'Tim mạch';
+    final timeline = _getExperienceTimeline(doctor);
+    if (timeline.isEmpty) return const SizedBox.shrink();
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
       width: double.infinity,
@@ -589,104 +670,64 @@ class _DoctorDetailScreenState extends ConsumerState<DoctorDetailScreen> {
             ),
           ),
           const SizedBox(height: 20),
-          // Timeline 1
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Column(
-                children: [
-                  Container(
-                    width: 12,
-                    height: 12,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF297EFF),
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: const Color(0xFF297EFF).withOpacity(0.1),
-                        width: 4,
-                      ),
-                    ),
-                  ),
-                  Container(
-                    width: 2,
-                    height: 48,
-                    color: const Color(0xFFDADFE7),
-                  ),
-                ],
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+          ...timeline.asMap().entries.map((entry) {
+            final index = entry.key;
+            final item = entry.value;
+            final isLast = index == timeline.length - 1;
+            
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Column(
                   children: [
-                    Text(
-                      'Trưởng khoa $specialty',
-                      style: const TextStyle(
-                        color: Color(0xFF101418),
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
+                    Container(
+                      width: 12,
+                      height: 12,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF297EFF).withOpacity(index == 0 ? 1.0 : 0.4),
+                        shape: BoxShape.circle,
+                        border: index == 0 ? Border.all(
+                          color: const Color(0xFF297EFF).withOpacity(0.15),
+                          width: 4,
+                        ) : null,
                       ),
                     ),
-                    const SizedBox(height: 4),
-                    const Text(
-                      'Bệnh viện Đại học Y Dược • 2018 - Hiện tại',
-                      style: TextStyle(
-                        color: Color(0xFF5E718D),
-                        fontSize: 14,
+                    if (!isLast)
+                      Container(
+                        width: 2,
+                        height: 48,
+                        color: const Color(0xFFDADFE7),
                       ),
-                    ),
                   ],
                 ),
-              ),
-            ],
-          ),
-          // Timeline 2
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Column(
-                children: [
-                  Container(
-                    width: 12,
-                    height: 12,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF297EFF).withOpacity(0.4),
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                  Container(
-                    width: 2,
-                    height: 16,
-                    color: Colors.transparent,
-                  ),
-                ],
-              ),
-              const SizedBox(width: 16),
-              const Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Bác sĩ nội trú',
-                      style: TextStyle(
-                        color: Color(0xFF101418),
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        item.title,
+                        style: const TextStyle(
+                          color: Color(0xFF101418),
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Bệnh viện Chợ Rẫy • 2014 - 2018',
-                      style: TextStyle(
-                        color: Color(0xFF5E718D),
-                        fontSize: 14,
+                      const SizedBox(height: 4),
+                      Text(
+                        item.subtitle,
+                        style: const TextStyle(
+                          color: Color(0xFF5E718D),
+                          fontSize: 14,
+                        ),
                       ),
-                    ),
-                  ],
+                      if (!isLast) const SizedBox(height: 20),
+                    ],
+                  ),
                 ),
-              ),
-            ],
-          ),
+              ],
+            );
+          }),
         ],
       ),
     );
@@ -1195,4 +1236,10 @@ class _DoctorDetailScreenState extends ConsumerState<DoctorDetailScreen> {
     }
     return '${amount.toStringAsFixed(0)}đ';
   }
+}
+
+class _ExperienceItem {
+  final String title;
+  final String subtitle;
+  _ExperienceItem(this.title, this.subtitle);
 }
