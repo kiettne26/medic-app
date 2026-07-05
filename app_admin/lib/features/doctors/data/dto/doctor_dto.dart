@@ -17,7 +17,6 @@ class DoctorDto with _$DoctorDto {
     required double? rating,
     required int? totalReviews,
     @Default(true) bool isAvailable,
-    required double? consultationFee,
     required List<MedicalServiceDto>? services,
   }) = _DoctorDto;
 

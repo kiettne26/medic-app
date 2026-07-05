@@ -16,7 +16,7 @@ class ServicesController extends AsyncNotifier<List<MedicalServiceDto>> {
 
   Future<List<MedicalServiceDto>> _fetchServices() async {
     final api = ref.read(servicesApiProvider);
-    return api.getServices();
+    return api.getServices(includeInactive: true);
   }
 
   Future<void> refresh() async {

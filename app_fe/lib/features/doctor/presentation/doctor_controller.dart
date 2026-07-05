@@ -43,8 +43,10 @@ class DoctorState {
 class DoctorController extends StateNotifier<DoctorState> {
   final DoctorRepository _repository;
 
-  DoctorController(this._repository) : super(DoctorState()) {
-    loadDoctors();
+  DoctorController(this._repository, {bool autoLoad = true}) : super(DoctorState()) {
+    if (autoLoad) {
+      loadDoctors();
+    }
   }
 
   /// Load tất cả bác sĩ từ API
@@ -131,4 +133,12 @@ class DoctorController extends StateNotifier<DoctorState> {
 final doctorControllerProvider =
     StateNotifierProvider<DoctorController, DoctorState>((ref) {
       return DoctorController(ref.watch(doctorRepositoryProvider));
+    });
+
+/// Provider rieng cho luong dat lich.
+/// Man chon bac si co the loc theo dich vu, nen khong dung chung state voi tab
+/// danh sach bac si.
+final bookingDoctorControllerProvider =
+    StateNotifierProvider.autoDispose<DoctorController, DoctorState>((ref) {
+      return DoctorController(ref.watch(doctorRepositoryProvider), autoLoad: false);
     });

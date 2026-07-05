@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">MediBook</string>
+    <!-- Replace these with values from Facebook Developers > App settings > Basic. -->
+    <string name="facebook_app_id">154397143066175</string>
+    <string name="facebook_client_token">6a10e13b613f41b430def7dd7f486355</string>
+    <string name="fb_login_protocol_scheme">fb154397143066175</string>
+</resources>

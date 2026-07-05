@@ -19,7 +19,22 @@ class BookingRepository {
     return _api.createBooking(request);
   }
 
+  Future<PaymentInitDto> initiatePayment(
+    String bookingId,
+    InitiatePaymentRequest request,
+  ) {
+    return _api.initiatePayment(bookingId, request);
+  }
+
+  Future<BookingDto> refreshPaymentStatus(String bookingId) {
+    return _api.refreshPaymentStatus(bookingId);
+  }
+
   Future<List<BookingDto>> getMyBookings() {
     return _api.getMyBookings();
+  }
+
+  Future<BookingDto> cancelBooking(String bookingId, String reason) {
+    return _api.cancelBooking(bookingId, reason);
   }
 }

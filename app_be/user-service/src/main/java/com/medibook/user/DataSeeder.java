@@ -129,7 +129,6 @@ public class DataSeeder implements CommandLineRunner {
                                 .rating(4.9)
                                 .totalReviews(50)
                                 .isAvailable(true)
-                                .consultationFee(200000.0)
                                 .avatarUrl("https://img.freepik.com/free-photo/woman-doctor-wearing-lab-coat-with-stethoscope-isolated_1303-29791.jpg")
                                 .build();
                 doctor = doctorRepository.save(doctor);

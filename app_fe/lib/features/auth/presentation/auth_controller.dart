@@ -5,6 +5,8 @@ import '../data/dto/auth_dto.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:google_sign_in/google_sign_in.dart' as google;
 import 'package:flutter_facebook_auth/flutter_facebook_auth.dart' as facebook;
+import '../../profile/data/source/profile_api.dart';
+import '../../profile/data/dto/profile_dto.dart';
 
 // State definition (Loading, Success, Error)
 enum AuthState { initial, loading, success, error, registerSuccess }
@@ -35,9 +37,10 @@ class AuthStateData {
 
 class AuthController extends StateNotifier<AuthStateData> {
   final AuthRepository _repository;
+  final ProfileApi _profileApi;
   final FlutterSecureStorage _storage;
 
-  AuthController(this._repository)
+  AuthController(this._repository, this._profileApi)
     : _storage = const FlutterSecureStorage(),
       super(AuthStateData());
 
@@ -73,17 +76,51 @@ class AuthController extends StateNotifier<AuthStateData> {
     }
   }
 
-  Future<void> register(
-    String name,
-    String email,
-    String phone,
-    String password,
-  ) async {
+  Future<void> register({
+    required String name,
+    required String email,
+    required String phone,
+    required String password,
+    required String address,
+    required String gender,
+    required String dob,
+  }) async {
     state = state.copyWith(status: AuthState.loading, errorMessage: null);
     try {
-      await _repository.register(name, email, phone, password);
-      // Notify success but do not auto-login
-      state = state.copyWith(status: AuthState.registerSuccess);
+      // 1. Đăng ký tài khoản và nhận AuthResponse
+      final response = await _repository.register(name, email, phone, password);
+
+      // 2. Lưu token để tự động đăng nhập
+      await _storage.write(key: 'access_token', value: response.accessToken);
+      await _storage.write(key: 'refresh_token', value: response.refreshToken);
+
+      if (response.user != null) {
+        final userId = response.user!.id;
+        await _storage.write(key: 'user_id', value: userId);
+        await _storage.write(key: 'user_email', value: response.user!.email);
+        await _storage.write(
+          key: 'user_name',
+          value: response.user!.fullName ?? name,
+        );
+        await _storage.write(
+          key: 'user_avatar',
+          value: response.user!.avatarUrl ?? '',
+        );
+
+        // 3. Gọi API cập nhật profile bổ sung (Địa chỉ, Ngày sinh, Giới tính)
+        await _profileApi.updateProfile(
+          userId,
+          UpdateProfileRequest(
+            fullName: name,
+            phone: phone,
+            address: address,
+            gender: gender,
+            dob: dob,
+          ),
+        );
+      }
+
+      state = state.copyWith(status: AuthState.success, authResponse: response);
     } catch (e) {
       state = state.copyWith(
         status: AuthState.error,
@@ -105,6 +142,10 @@ class AuthController extends StateNotifier<AuthStateData> {
         print('[SocialLogin] Initializing GoogleSignIn...');
         final google.GoogleSignIn googleSignIn = google.GoogleSignIn(
           scopes: ['email'],
+          clientId:
+              '1035135642767-bp8s63atsnmc74si6oimi29eqtjjdpej.apps.googleusercontent.com',
+          serverClientId:
+              '1035135642767-bp8s63atsnmc74si6oimi29eqtjjdpej.apps.googleusercontent.com',
         );
 
         // Sign out first to force account picker to show
@@ -131,27 +172,37 @@ class AuthController extends StateNotifier<AuthStateData> {
         email = googleUser.email;
         name = googleUser.displayName;
         avatar = googleUser.photoUrl;
-        token = googleAuth.idToken;
+        token = googleAuth.idToken ?? googleAuth.accessToken ?? googleUser.id;
       } else if (provider == 'facebook') {
         print('[SocialLogin] Initializing Facebook Login...');
         final facebook.LoginResult result = await facebook.FacebookAuth.instance
-            .login();
+            .login(permissions: const ['email', 'public_profile']);
 
         if (result.status == facebook.LoginStatus.success) {
           final facebook.AccessToken accessToken = result.accessToken!;
-          final tokenData = accessToken.toJson();
-          token = tokenData['token'] as String?;
+          token = accessToken.tokenString;
           print(
             '[SocialLogin] Got Facebook token: ${token != null ? "YES" : "NO"}',
           );
 
-          final userData = await facebook.FacebookAuth.instance.getUserData();
-          email = userData['email'];
-          name = userData['name'];
+          final userData = await facebook.FacebookAuth.instance.getUserData(
+            fields: 'id,name,email,picture.width(200).height(200)',
+          );
+          email = userData['email'] as String?;
+          name = userData['name'] as String?;
           avatar = userData['picture']?['data']?['url'];
           print('[SocialLogin] Facebook user: $email');
+
+          if (email == null || email!.trim().isEmpty) {
+            throw Exception(
+              'Facebook không cung cấp email. Vui lòng cấp quyền email hoặc đăng nhập bằng phương thức khác.',
+            );
+          }
         } else {
           print('[SocialLogin] Facebook login failed: ${result.status}');
+          if (result.message != null && result.message!.isNotEmpty) {
+            throw Exception(result.message);
+          }
           state = state.copyWith(status: AuthState.initial);
           return;
         }
@@ -171,6 +222,10 @@ class AuthController extends StateNotifier<AuthStateData> {
           token,
         );
         print('[SocialLogin] Backend responded successfully!');
+
+        // Xóa TOÀN BỘ dữ liệu cũ để tránh hiển thị thông tin tài khoản trước
+        await _storage.deleteAll();
+        print('[SocialLogin] Cleared old storage data');
 
         await _storage.write(key: 'access_token', value: response.accessToken);
         await _storage.write(
@@ -232,5 +287,6 @@ class AuthController extends StateNotifier<AuthStateData> {
 final authControllerProvider =
     StateNotifierProvider<AuthController, AuthStateData>((ref) {
       final repository = ref.watch(authRepositoryProvider);
-      return AuthController(repository);
+      final profileApi = ref.watch(profileApiProvider);
+      return AuthController(repository, profileApi);
     });

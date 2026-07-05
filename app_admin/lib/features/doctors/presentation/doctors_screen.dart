@@ -153,7 +153,6 @@ class _DoctorsScreenState extends ConsumerState<DoctorsScreen> {
                 rating: 0,
                 totalReviews: 0,
                 isAvailable: true,
-                consultationFee: 0,
                 services: [],
               ),
             );
@@ -463,17 +462,43 @@ class _DoctorsScreenState extends ConsumerState<DoctorsScreen> {
       onClose: _closeSidebar,
       onSave: (doctorData) async {
         final isNew = _selectedDoctor!.id.isEmpty;
-        if (isNew) {
-          await ref
-              .read(doctorsControllerProvider.notifier)
-              .createDoctor(doctorData);
-        } else {
-          await ref
-              .read(doctorsControllerProvider.notifier)
-              .updateDoctor(_selectedDoctor!.id, doctorData);
+        try {
+          if (isNew) {
+            final result = await ref
+                .read(doctorsControllerProvider.notifier)
+                .createDoctor(doctorData);
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Tạo bác sĩ thành công! Email: ${doctorData['email']}'),
+                  backgroundColor: Colors.green,
+                ),
+              );
+            }
+          } else {
+            await ref
+                .read(doctorsControllerProvider.notifier)
+                .updateDoctor(_selectedDoctor!.id, doctorData);
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Cập nhật thông tin bác sĩ thành công!'),
+                  backgroundColor: Colors.green,
+                ),
+              );
+            }
+          }
+          _closeSidebar();
+        } catch (e) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Lỗi: ${e.toString()}'),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
         }
-        _closeSidebar();
-        ref.read(doctorsControllerProvider.notifier).refresh();
       },
     );
   }
@@ -500,6 +525,9 @@ class _DoctorFormSidebarState extends ConsumerState<DoctorFormSidebar> {
   late TextEditingController _specialtyController;
   late TextEditingController _descriptionController;
   late TextEditingController _experienceController; // Mock
+  late TextEditingController _emailController;
+  late TextEditingController _passwordController;
+  late TextEditingController _phoneController;
   bool _isAvailable = false;
   List<MedicalServiceDto> _selectedServices = [];
 
@@ -526,9 +554,9 @@ class _DoctorFormSidebarState extends ConsumerState<DoctorFormSidebar> {
     _experienceController = TextEditingController(
       text: '${(widget.doctor.totalReviews ?? 0) % 15 + 2} năm',
     );
-    _experienceController = TextEditingController(
-      text: '${(widget.doctor.totalReviews ?? 0) % 15 + 2} năm',
-    );
+    _emailController = TextEditingController(); // Email cho tài khoản mới
+    _passwordController = TextEditingController(); // Password cho tài khoản mới
+    _phoneController = TextEditingController(text: widget.doctor.phone ?? '');
     _isAvailable = widget.doctor.isAvailable;
     _avatarUrl = widget.doctor.avatarUrl;
     _selectedServices = List.from(widget.doctor.services ?? []);
@@ -543,6 +571,9 @@ class _DoctorFormSidebarState extends ConsumerState<DoctorFormSidebar> {
     _specialtyController.dispose();
     _descriptionController.dispose();
     _experienceController.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
+    _phoneController.dispose();
     super.dispose();
   }
 
@@ -691,6 +722,52 @@ class _DoctorFormSidebarState extends ConsumerState<DoctorFormSidebar> {
                 const SizedBox(height: 32),
 
                 // Form Fields
+                // === THÔNG TIN ĐĂNG NHẬP (chỉ hiện khi tạo mới) ===
+                if (isNew) ...[
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFEF3C7),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: const Color(0xFFFCD34D)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(Icons.info_outline, 
+                              color: Color(0xFFD97706), size: 18),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Thông tin tài khoản đăng nhập',
+                              style: GoogleFonts.manrope(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                                color: const Color(0xFFD97706),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        _SidebarInput(
+                          label: 'Email đăng nhập',
+                          controller: _emailController,
+                          keyboardType: TextInputType.emailAddress,
+                        ),
+                        const SizedBox(height: 12),
+                        _SidebarInput(
+                          label: 'Mật khẩu',
+                          controller: _passwordController,
+                          obscureText: true,
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                ],
+                
+                // === THÔNG TIN BÁC SĨ ===
                 _SidebarInput(label: 'Họ và tên', controller: _nameController),
                 const SizedBox(height: 16),
                 Row(
@@ -709,6 +786,12 @@ class _DoctorFormSidebarState extends ConsumerState<DoctorFormSidebar> {
                       ),
                     ),
                   ],
+                ),
+                const SizedBox(height: 16),
+                _SidebarInput(
+                  label: 'Số điện thoại',
+                  controller: _phoneController,
+                  keyboardType: TextInputType.phone,
                 ),
                 const SizedBox(height: 16),
                 _buildServicesInput(),
@@ -751,19 +834,55 @@ class _DoctorFormSidebarState extends ConsumerState<DoctorFormSidebar> {
               Expanded(
                 child: ElevatedButton(
                   onPressed: () {
-                    final data = {
-                      'userId': widget.doctor.userId.isNotEmpty
-                          ? widget.doctor.userId
-                          : '00000000-0000-0000-0000-000000000000', // Temporary Mock for Create, Real User ID for Update
+                    final isNew = widget.doctor.id.isEmpty;
+                    
+                    // Validation cho tạo mới
+                    if (isNew) {
+                      if (_emailController.text.isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Vui lòng nhập email')),
+                        );
+                        return;
+                      }
+                      if (_passwordController.text.length < 6) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Mật khẩu phải có ít nhất 6 ký tự')),
+                        );
+                        return;
+                      }
+                    }
+                    
+                    if (_nameController.text.isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Vui lòng nhập họ tên')),
+                      );
+                      return;
+                    }
+                    if (_specialtyController.text.isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Vui lòng nhập chuyên khoa')),
+                      );
+                      return;
+                    }
+                    
+                    final data = <String, dynamic>{
                       'fullName': _nameController.text,
                       'specialty': _specialtyController.text,
                       'description': _descriptionController.text,
                       'isAvailable': _isAvailable,
                       'avatarUrl': _avatarUrl,
-                      'phone': widget.doctor.phone, // Preserve existing phone
-                      'consultationFee': widget.doctor.consultationFee,
+                      'phone': _phoneController.text,
                       'serviceIds': _selectedServices.map((e) => e.id).toList(),
                     };
+                    
+                    // Thêm thông tin đăng nhập nếu tạo mới
+                    if (isNew) {
+                      data['email'] = _emailController.text;
+                      data['password'] = _passwordController.text;
+                    } else {
+                      data['userId'] = widget.doctor.userId;
+                    }
+                    
                     widget.onSave(data);
                   },
                   style: ElevatedButton.styleFrom(
@@ -986,11 +1105,15 @@ class _SidebarInput extends StatelessWidget {
   final String label;
   final TextEditingController controller;
   final int maxLines;
+  final TextInputType? keyboardType;
+  final bool obscureText;
 
   const _SidebarInput({
     required this.label,
     required this.controller,
     this.maxLines = 1,
+    this.keyboardType,
+    this.obscureText = false,
   });
 
   @override
@@ -1009,7 +1132,9 @@ class _SidebarInput extends StatelessWidget {
         const SizedBox(height: 8),
         TextFormField(
           controller: controller,
-          maxLines: maxLines,
+          maxLines: obscureText ? 1 : maxLines,
+          keyboardType: keyboardType,
+          obscureText: obscureText,
           decoration: InputDecoration(
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),

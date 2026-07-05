@@ -20,6 +20,26 @@
 	<string>$(FLUTTER_BUILD_NAME)</string>
 	<key>CFBundleSignature</key>
 	<string>????</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>fb154397143066175</string>
+			</array>
+		</dict>
+	</array>
+	<key>FacebookAppID</key>
+	<string>154397143066175</string>
+	<key>FacebookClientToken</key>
+	<string>6a10e13b613f41b430def7dd7f486355</string>
+	<key>FacebookDisplayName</key>
+	<string>MediBook</string>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>fbapi</string>
+		<string>fb-messenger-share-api</string>
+	</array>
 	<key>CFBundleVersion</key>
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>

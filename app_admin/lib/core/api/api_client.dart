@@ -47,10 +47,39 @@ class ApiClient {
               }
             }
           }
+          
+          // Extract error message from server response
+          final serverMessage = _extractErrorMessage(error);
+          if (serverMessage != null) {
+            return handler.next(
+              DioException(
+                requestOptions: error.requestOptions,
+                response: error.response,
+                type: error.type,
+                error: serverMessage,
+                message: serverMessage,
+              ),
+            );
+          }
+          
           return handler.next(error);
         },
       ),
     );
+  }
+
+  /// Extract error message from server response
+  String? _extractErrorMessage(DioException error) {
+    try {
+      final data = error.response?.data;
+      if (data is Map<String, dynamic>) {
+        // Try common error message fields
+        return data['message'] as String? ??
+            data['error'] as String? ??
+            data['errorMessage'] as String?;
+      }
+    } catch (_) {}
+    return null;
   }
 
   Future<bool> _refreshToken() async {

@@ -185,38 +185,47 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
                   color: const Color(0xFF5E718D),
                 ),
               ),
-              const SizedBox(height: 16),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: ReviewScreen.successColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      monthlyGrowth >= 0
-                          ? Icons.trending_up
-                          : Icons.trending_down,
-                      color: ReviewScreen.successColor,
-                      size: 16,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      '${monthlyGrowth >= 0 ? '+' : ''}${monthlyGrowth.toStringAsFixed(0)}% tháng này',
-                      style: GoogleFonts.manrope(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: ReviewScreen.successColor,
+              if (totalReviews > 0) ...[
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: (monthlyGrowth >= 0
+                            ? ReviewScreen.successColor
+                            : ReviewScreen.dangerColor)
+                        .withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        monthlyGrowth >= 0
+                            ? Icons.trending_up
+                            : Icons.trending_down,
+                        color: monthlyGrowth >= 0
+                            ? ReviewScreen.successColor
+                            : ReviewScreen.dangerColor,
+                        size: 16,
                       ),
-                    ),
-                  ],
+                      const SizedBox(width: 4),
+                      Text(
+                        '${monthlyGrowth >= 0 ? '+' : ''}${monthlyGrowth.toStringAsFixed(0)}% tháng này',
+                        style: GoogleFonts.manrope(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: monthlyGrowth >= 0
+                              ? ReviewScreen.successColor
+                              : ReviewScreen.dangerColor,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
+              ],
             ],
           ),
         ),

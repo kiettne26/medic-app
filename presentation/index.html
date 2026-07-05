@@ -1,0 +1,1111 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MediBook - Xây dựng hệ thống đặt lịch khám và tư vấn trực tuyến đa nền tảng</title>
+
+    <!-- Reveal.js CDN -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/theme/black.min.css" id="theme">
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+    <style>
+        :root {
+            --primary: #297EFF;
+            --primary-dark: #1a5fd4;
+            --primary-light: #5a9dff;
+            --accent: #00D4AA;
+            --bg-dark: #0a0e27;
+            --bg-card: rgba(255,255,255,0.05);
+            --text-main: #e8eaf6;
+            --text-muted: #8892b0;
+            --gradient-1: linear-gradient(135deg, #297EFF 0%, #00D4AA 100%);
+            --gradient-2: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --gradient-3: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            --gradient-warn: linear-gradient(135deg, #f5576c 0%, #ff8a65 100%);
+        }
+
+        .reveal {
+            font-family: 'Inter', -apple-system, sans-serif;
+            color: var(--text-main);
+        }
+
+        .reveal .slides { text-align: left; }
+        .reveal .slides section { padding: 40px 60px; }
+
+        .reveal .slide-background {
+            background: var(--bg-dark) !important;
+        }
+
+        .reveal .slide-background::before {
+            content: '';
+            position: absolute;
+            top: -50%; right: -30%;
+            width: 600px; height: 600px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(41,126,255,0.08) 0%, transparent 70%);
+            pointer-events: none;
+        }
+
+        /* ===== TYPOGRAPHY ===== */
+        .reveal h1, .reveal h2, .reveal h3, .reveal h4 {
+            font-family: 'Inter', sans-serif;
+            font-weight: 700; color: #fff;
+            text-transform: none;
+            letter-spacing: -0.02em;
+            text-align: left;
+        }
+        .reveal h1 { font-size: 2.4em; line-height: 1.15; }
+        .reveal h2 { font-size: 1.7em; line-height: 1.2; margin-bottom: 30px; }
+        .reveal h3 { font-size: 1.15em; color: var(--primary-light); margin-bottom: 12px; }
+
+        .reveal p, .reveal li {
+            font-size: 0.72em; line-height: 1.7; color: var(--text-muted);
+        }
+        .reveal ul { list-style: none; padding: 0; }
+        .reveal ul li {
+            position: relative; padding-left: 22px; margin-bottom: 8px;
+        }
+        .reveal ul li::before {
+            content: '';
+            position: absolute; left: 0; top: 10px;
+            width: 7px; height: 7px; border-radius: 50%;
+            background: var(--gradient-1);
+        }
+
+        /* ===== COMPONENTS ===== */
+        .slide-number-tag {
+            display: inline-block;
+            background: var(--gradient-1);
+            color: #fff; font-size: 0.52em; font-weight: 600;
+            padding: 4px 14px; border-radius: 20px;
+            margin-bottom: 12px; letter-spacing: 0.05em;
+        }
+
+        .highlight-text {
+            background: var(--gradient-1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .card {
+            background: var(--bg-card);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 14px; padding: 22px;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+        }
+        .card:hover {
+            border-color: rgba(41,126,255,0.3);
+            transform: translateY(-2px);
+        }
+
+        .card-title {
+            font-size: 0.72em; font-weight: 600; color: #fff;
+            margin-bottom: 8px;
+            display: flex; align-items: center; gap: 10px;
+        }
+        .card-title i { color: var(--primary); font-size: 1.1em; }
+
+        .card-body {
+            font-size: 0.6em; color: var(--text-muted); line-height: 1.6;
+        }
+
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-top: 18px; }
+        .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; margin-top: 18px; }
+        .grid-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 12px; margin-top: 18px; }
+
+        .badge {
+            display: inline-block;
+            background: rgba(41,126,255,0.15); color: var(--primary-light);
+            font-size: 0.55em; padding: 3px 10px; border-radius: 6px;
+            font-weight: 500; margin: 2px;
+        }
+        .badge-green { background: rgba(0,212,170,0.15); color: var(--accent); }
+        .badge-purple { background: rgba(118,75,162,0.15); color: #b794f6; }
+        .badge-pink { background: rgba(245,87,108,0.15); color: #f5576c; }
+        .badge-orange { background: rgba(255,138,101,0.15); color: #ff8a65; }
+
+        .divider {
+            width: 60px; height: 4px;
+            background: var(--gradient-1); border-radius: 2px; margin: 12px 0;
+        }
+
+        .feature-highlight {
+            background: linear-gradient(135deg, rgba(41,126,255,0.1) 0%, rgba(0,212,170,0.05) 100%);
+            border: 1px solid rgba(41,126,255,0.2);
+            border-radius: 14px; padding: 18px 22px; margin-top: 14px;
+        }
+        .feature-highlight .fh-title {
+            font-size: 0.68em; font-weight: 600; color: #fff; margin-bottom: 6px;
+        }
+        .feature-highlight .fh-desc {
+            font-size: 0.58em; color: var(--text-muted); line-height: 1.6;
+        }
+
+        /* ===== TITLE SLIDE ===== */
+        .title-slide {
+            text-align: center !important;
+            display: flex !important; flex-direction: column;
+            align-items: center; justify-content: center;
+        }
+        .title-slide .logo-icon {
+            width: 76px; height: 76px; border-radius: 22px;
+            background: var(--gradient-1);
+            display: flex; align-items: center; justify-content: center;
+            margin: 0 auto 28px; font-size: 34px; color: #fff;
+            box-shadow: 0 20px 60px rgba(41,126,255,0.3);
+        }
+        .title-slide h1 { text-align: center; font-size: 1.9em; margin-bottom: 10px; }
+        .title-slide .subtitle {
+            font-size: 0.78em; color: var(--text-muted);
+            max-width: 700px; margin: 0 auto 35px; text-align: center;
+        }
+        .title-slide .author-info {
+            display: flex; gap: 50px; justify-content: center; margin-top: 15px;
+        }
+        .title-slide .author-info div { text-align: center; }
+        .title-slide .author-info .label {
+            font-size: 0.48em; color: var(--primary-light); font-weight: 600;
+            text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 5px;
+        }
+        .title-slide .author-info .name {
+            font-size: 0.68em; color: #fff; font-weight: 500;
+        }
+
+        /* ===== ARCHITECTURE ===== */
+        .arch-flow {
+            display: flex; align-items: center; justify-content: center;
+            gap: 10px; margin: 20px 0; flex-wrap: wrap;
+        }
+        .arch-box {
+            background: var(--bg-card);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 12px; padding: 14px 18px;
+            text-align: center; min-width: 110px;
+        }
+        .arch-box.primary { background: rgba(41,126,255,0.15); border-color: rgba(41,126,255,0.3); }
+        .arch-box.accent { background: rgba(0,212,170,0.1); border-color: rgba(0,212,170,0.2); }
+        .arch-box .box-icon { font-size: 1.4em; margin-bottom: 6px; }
+        .arch-box .box-label { font-size: 0.55em; font-weight: 600; color: #fff; }
+        .arch-box .box-sub { font-size: 0.45em; color: var(--text-muted); margin-top: 2px; }
+        .arch-arrow { font-size: 1.1em; color: var(--primary); }
+
+        /* ===== SEQUENCE STEP ===== */
+        .seq-step {
+            display: flex; align-items: center; gap: 14px; margin-bottom: 12px;
+        }
+        .seq-num {
+            width: 30px; height: 30px; border-radius: 50%;
+            background: var(--gradient-1);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.58em; font-weight: 700; color: #fff; flex-shrink: 0;
+        }
+        .seq-content { font-size: 0.62em; color: var(--text-muted); line-height: 1.5; }
+        .seq-content strong { color: #fff; }
+
+        /* ===== TABLE ===== */
+        .reveal table {
+            width: 100%; border-collapse: separate; border-spacing: 0;
+            margin-top: 12px; font-size: 0.58em;
+        }
+        .reveal table th {
+            background: rgba(41,126,255,0.15); color: var(--primary-light);
+            font-weight: 600; padding: 10px 14px; text-align: left; border: none;
+        }
+        .reveal table th:first-child { border-radius: 10px 0 0 0; }
+        .reveal table th:last-child { border-radius: 0 10px 0 0; }
+        .reveal table td {
+            padding: 8px 14px; border-bottom: 1px solid rgba(255,255,255,0.05);
+            color: var(--text-muted);
+        }
+
+        /* ===== CODE BLOCK ===== */
+        .code-block {
+            background: rgba(0,0,0,0.4);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 12px; padding: 16px 20px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.52em; line-height: 1.65; color: #c3cee3;
+            overflow-x: auto; margin-top: 12px;
+        }
+        .code-block .keyword { color: #c678dd; }
+        .code-block .string { color: #98c379; }
+        .code-block .comment { color: #5c6370; font-style: italic; }
+        .code-block .function { color: #61afef; }
+        .code-block .type { color: #e5c07b; }
+        .code-block .annotation { color: #e06c75; }
+
+        /* ===== USECASE ===== */
+        .usecase-item {
+            display: flex; align-items: flex-start; gap: 10px;
+            margin-bottom: 8px; padding: 9px 13px;
+            background: var(--bg-card); border-radius: 10px;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+        .usecase-item i { color: var(--primary); font-size: 0.85em; margin-top: 2px; }
+        .usecase-item span { font-size: 0.6em; color: var(--text-muted); line-height: 1.5; }
+        .usecase-item strong { color: #fff; }
+
+        /* ===== STAT ===== */
+        .stat-box { text-align: center; padding: 18px; }
+        .stat-number {
+            font-size: 1.8em; font-weight: 800;
+            background: var(--gradient-1);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .stat-label { font-size: 0.55em; color: var(--text-muted); margin-top: 4px; }
+
+        /* ===== ENDING ===== */
+        .ending-slide {
+            text-align: center !important;
+            display: flex !important; flex-direction: column;
+            align-items: center; justify-content: center;
+        }
+        .ending-slide h1 { text-align: center; font-size: 2.4em; }
+        .ending-slide p { text-align: center; font-size: 0.8em; }
+
+        /* ===== MISC ===== */
+        .reveal .progress { background: rgba(255,255,255,0.05); height: 4px; }
+        .reveal .progress span { background: var(--gradient-1); }
+        .reveal .slide-number {
+            font-family: 'Inter', sans-serif; font-size: 12px;
+            color: var(--text-muted); background: transparent;
+        }
+
+        /* ===== LOCK DIAGRAM ===== */
+        .lock-diagram {
+            display: flex; align-items: stretch; gap: 12px;
+            margin-top: 15px;
+        }
+        .lock-column {
+            flex: 1; text-align: center;
+            background: var(--bg-card);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 12px; padding: 16px 12px;
+        }
+        .lock-column.locked {
+            border-color: rgba(245,87,108,0.4);
+            background: rgba(245,87,108,0.05);
+        }
+        .lock-column.success {
+            border-color: rgba(0,212,170,0.4);
+            background: rgba(0,212,170,0.05);
+        }
+        .lock-column .lc-icon { font-size: 1.6em; margin-bottom: 8px; }
+        .lock-column .lc-label { font-size: 0.58em; font-weight: 600; color: #fff; }
+        .lock-column .lc-desc { font-size: 0.5em; color: var(--text-muted); margin-top: 4px; }
+
+        @media (max-width: 768px) {
+            .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
+            .arch-flow { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+    <div class="reveal">
+        <div class="slides">
+
+            <!-- ==================== SLIDE 1: TITLE ==================== -->
+            <section class="title-slide">
+                <div class="logo-icon">
+                    <i class="fas fa-heartbeat"></i>
+                </div>
+                <h1>XÂY DỰNG HỆ THỐNG ĐẶT LỊCH KHÁM VÀ TƯ VẤN TRỰC TUYẾN <span class="highlight-text">ĐA NỀN TẢNG</span></h1>
+                <p class="subtitle">Giải pháp tối ưu hóa đặt lịch khám & tư vấn sức khỏe trực tuyến</p>
+                <div class="author-info">
+                    <div>
+                        <div class="label">Sinh viên thực hiện</div>
+                        <div class="name">Chu Tuấn Kiệt</div>
+                    </div>
+                    <div>
+                        <div class="label">Giảng viên hướng dẫn</div>
+                        <div class="name">TS. Lý Anh Tuấn</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ==================== SLIDE 2: ĐẶT VẤN ĐỀ ==================== -->
+            <section>
+                <span class="slide-number-tag">01 — ĐẶT VẤN ĐỀ</span>
+                <h2>Lý do chọn đề tài</h2>
+                <div class="divider"></div>
+                <div class="grid-2">
+                    <div class="card">
+                        <div class="card-title"><i class="fas fa-exclamation-triangle"></i> Thực trạng</div>
+                        <div class="card-body">
+                            <ul>
+                                <li>Quá tải tại các phòng khám, thời gian chờ đợi kéo dài</li>
+                                <li>Thủ tục đặt lịch khám rườm rà, thiếu linh hoạt</li>
+                                <li>Thiếu kênh tư vấn sức khỏe tức thì 24/7</li>
+                                <li>Khó tra cứu thông tin bác sĩ phù hợp chuyên khoa</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-title"><i class="fas fa-lightbulb"></i> Giải pháp MediBook</div>
+                        <div class="card-body">
+                            <ul>
+                                <li><strong>App Mobile</strong> cho bệnh nhân đặt lịch & chatbot AI</li>
+                                <li><strong>Web Bác sĩ</strong> quản lý lịch hẹn & tư vấn trực tuyến</li>
+                                <li><strong>Web Admin</strong> quản trị toàn bộ hệ thống</li>
+                                <li>Kiến trúc <strong>Microservices</strong> — mở rộng linh hoạt</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ==================== SLIDE 3: TECH STACK ==================== -->
+            <section>
+                <span class="slide-number-tag">02 — CÔNG NGHỆ</span>
+                <h2>Công nghệ sử dụng</h2>
+                <div class="divider"></div>
+                <div class="grid-3">
+                    <div class="card">
+                        <div class="card-title"><i class="fas fa-server"></i> Backend</div>
+                        <div class="card-body">
+                            <span class="badge">Spring Boot</span>
+                            <span class="badge">Spring Cloud</span>
+                            <span class="badge">API Gateway</span>
+                            <span class="badge">Eureka Server</span>
+                            <span class="badge">JPA / Hibernate</span>
+                            <span class="badge">JavaMail</span>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-title"><i class="fas fa-layer-group"></i> Frontend</div>
+                        <div class="card-body">
+                            <span class="badge badge-green">Flutter / Dart</span>
+                            <span class="badge badge-green">Riverpod</span>
+                            <span class="badge badge-green">Go Router</span>
+                            <span class="badge badge-green">Dio HTTP</span>
+                            <span class="badge badge-green">Secure Storage</span>
+                            <span class="badge badge-green">Flutter Web</span>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-title"><i class="fas fa-database"></i> Database & AI</div>
+                        <div class="card-body">
+                            <span class="badge badge-purple">PostgreSQL</span>
+                            <span class="badge badge-purple">Supabase</span>
+                            <span class="badge badge-purple">Gemini 2.5 Flash</span>
+                            <span class="badge badge-purple">Google OAuth</span>
+                            <span class="badge badge-purple">Facebook Login</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="feature-highlight" style="margin-top: 16px;">
+                    <div class="fh-title">🚀 Đa nền tảng (Cross-Platform)</div>
+                    <div class="fh-desc">
+                        Sử dụng <strong>Flutter</strong> để build đồng thời: App Mobile (Android) cho bệnh nhân, Web cho bác sĩ và Web cho admin — cùng một codebase Dart, giảm thời gian phát triển và đảm bảo trải nghiệm đồng nhất.
+                    </div>
+                </div>
+            </section>
+
+            <!-- ==================== SLIDE 4: KIẾN TRÚC ==================== -->
+            <section>
+                <span class="slide-number-tag">03 — KIẾN TRÚC</span>
+                <h2>Kiến trúc hệ thống Microservices</h2>
+                <div class="divider"></div>
+
+                <div class="arch-flow">
+                    <div class="arch-box primary">
+                        <div class="box-icon">📱</div>
+                        <div class="box-label">App Bệnh nhân</div>
+                        <div class="box-sub">Flutter Mobile</div>
+                    </div>
+                    <div class="arch-box primary">
+                        <div class="box-icon">💻</div>
+                        <div class="box-label">Web Bác sĩ</div>
+                        <div class="box-sub">Flutter Web</div>
+                    </div>
+                    <div class="arch-box primary">
+                        <div class="box-icon">🖥️</div>
+                        <div class="box-label">Web Admin</div>
+                        <div class="box-sub">Flutter Web</div>
+                    </div>
+                    <div class="arch-arrow"><i class="fas fa-arrow-right"></i></div>
+                    <div class="arch-box accent">
+                        <div class="box-icon">🚪</div>
+                        <div class="box-label">API Gateway</div>
+                        <div class="box-sub">Port 8080</div>
+                    </div>
+                    <div class="arch-arrow"><i class="fas fa-arrow-right"></i></div>
+                    <div class="arch-box">
+                        <div class="box-icon">🔍</div>
+                        <div class="box-label">Eureka</div>
+                        <div class="box-sub">Discovery</div>
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-top: 18px;">
+                    <div class="card" style="text-align: center; padding: 14px 8px;">
+                        <div class="card-title" style="justify-content: center; font-size: 0.6em;"><i class="fas fa-shield-alt"></i> Auth</div>
+                        <div class="card-body" style="font-size: 0.48em;">JWT, Google<br>Facebook OAuth</div>
+                    </div>
+                    <div class="card" style="text-align: center; padding: 14px 8px;">
+                        <div class="card-title" style="justify-content: center; font-size: 0.6em;"><i class="fas fa-user-md"></i> User</div>
+                        <div class="card-body" style="font-size: 0.48em;">Người dùng<br>Chatbot AI</div>
+                    </div>
+                    <div class="card" style="text-align: center; padding: 14px 8px;">
+                        <div class="card-title" style="justify-content: center; font-size: 0.6em;"><i class="fas fa-calendar-check"></i> Booking</div>
+                        <div class="card-body" style="font-size: 0.48em;">Đặt lịch khám<br>Pessimistic Lock</div>
+                    </div>
+                    <div class="card" style="text-align: center; padding: 14px 8px;">
+                        <div class="card-title" style="justify-content: center; font-size: 0.6em;"><i class="fas fa-bell"></i> Notification</div>
+                        <div class="card-body" style="font-size: 0.48em;">Email HTML<br>QR Code</div>
+                    </div>
+                    <div class="card" style="text-align: center; padding: 14px 8px;">
+                        <div class="card-title" style="justify-content: center; font-size: 0.6em;"><i class="fas fa-chart-pie"></i> Analytics</div>
+                        <div class="card-body" style="font-size: 0.48em;">Thống kê<br>Doanh thu</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ==================== SLIDE 5: USE CASE ==================== -->
+            <section>
+                <span class="slide-number-tag">04 — PHÂN TÍCH</span>
+                <h2>Mô hình Use Case</h2>
+                <div class="divider"></div>
+                <div class="grid-3">
+                    <div>
+                        <h3><i class="fas fa-user"></i> Bệnh nhân</h3>
+                        <div class="usecase-item">
+                            <i class="fas fa-sign-in-alt"></i>
+                            <span><strong>Đăng ký / Đăng nhập</strong><br>Email OTP, Google, Facebook</span>
+                        </div>
+                        <div class="usecase-item">
+                            <i class="fas fa-calendar-plus"></i>
+                            <span><strong>Đặt lịch khám bệnh</strong><br>Chọn bác sĩ, dịch vụ, ngày giờ</span>
+                        </div>
+                        <div class="usecase-item">
+                            <i class="fas fa-robot"></i>
+                            <span><strong>Chatbot AI</strong><br>Tư vấn triệu chứng & gợi ý khoa</span>
+                        </div>
+                        <div class="usecase-item">
+                            <i class="fas fa-comments"></i>
+                            <span><strong>Chat trực tuyến</strong><br>Tư vấn với bác sĩ real-time</span>
+                        </div>
+                    </div>
+                    <div>
+                        <h3><i class="fas fa-stethoscope"></i> Bác sĩ</h3>
+                        <div class="usecase-item">
+                            <i class="fas fa-tasks"></i>
+                            <span><strong>Quản lý lịch hẹn</strong><br>Xác nhận, từ chối, hoàn tất</span>
+                        </div>
+                        <div class="usecase-item">
+                            <i class="fas fa-clock"></i>
+                            <span><strong>Quản lý ca làm việc</strong><br>Thiết lập khung giờ khám</span>
+                        </div>
+                        <div class="usecase-item">
+                            <i class="fas fa-comment-medical"></i>
+                            <span><strong>Tư vấn trực tuyến</strong><br>Chat với bệnh nhân</span>
+                        </div>
+                        <div class="usecase-item">
+                            <i class="fas fa-chart-line"></i>
+                            <span><strong>Dashboard</strong><br>Thống kê & đánh giá</span>
+                        </div>
+                    </div>
+                    <div>
+                        <h3><i class="fas fa-user-cog"></i> Quản trị viên</h3>
+                        <div class="usecase-item">
+                            <i class="fas fa-users-cog"></i>
+                            <span><strong>Quản lý người dùng</strong><br>Bệnh nhân & bác sĩ</span>
+                        </div>
+                        <div class="usecase-item">
+                            <i class="fas fa-hospital"></i>
+                            <span><strong>Quản lý dịch vụ</strong><br>Thêm, sửa, xóa dịch vụ khám</span>
+                        </div>
+                        <div class="usecase-item">
+                            <i class="fas fa-calendar-alt"></i>
+                            <span><strong>Quản lý ca khám</strong><br>Lịch trình tổng quan</span>
+                        </div>
+                        <div class="usecase-item">
+                            <i class="fas fa-chart-bar"></i>
+                            <span><strong>Thống kê doanh thu</strong><br>Dashboard tổng quan</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ==================== SLIDE 6: ERD ==================== -->
+            <section>
+                <span class="slide-number-tag">05 — CƠ SỞ DỮ LIỆU</span>
+                <h2>Mô hình thực thể liên kết (ERD) — 14 bảng</h2>
+                <div class="divider"></div>
+                <div class="grid-2">
+                    <div>
+                        <h3>Nhóm Core & Xác thực</h3>
+                        <table>
+                            <thead><tr><th>Bảng</th><th>Mô tả</th></tr></thead>
+                            <tbody>
+                                <tr><td><strong>roles</strong></td><td>Phân quyền (ADMIN, DOCTOR, PATIENT)</td></tr>
+                                <tr><td><strong>users</strong></td><td>Tài khoản, email, avatar, role</td></tr>
+                                <tr><td><strong>profiles</strong></td><td>Hồ sơ cá nhân chi tiết, địa chỉ, giới tính</td></tr>
+                                <tr><td><strong>refresh_tokens</strong></td><td>Token làm mới phiên đăng nhập</td></tr>
+                            </tbody>
+                        </table>
+                        <h3 style="margin-top: 14px;">Nhóm Chat</h3>
+                        <table>
+                            <thead><tr><th>Bảng</th><th>Mô tả</th></tr></thead>
+                            <tbody>
+                                <tr><td><strong>conversations</strong></td><td>Hội thoại bác sĩ — bệnh nhân</td></tr>
+                                <tr><td><strong>messages</strong></td><td>Tin nhắn text / ảnh trong hội thoại</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div>
+                        <h3>Nhóm Bác sĩ & Đặt lịch</h3>
+                        <table>
+                            <thead><tr><th>Bảng</th><th>Mô tả</th></tr></thead>
+                            <tbody>
+                                <tr><td><strong>doctors</strong></td><td>Hồ sơ bác sĩ, chuyên khoa, rating</td></tr>
+                                <tr><td><strong>medical_services</strong></td><td>Dịch vụ khám, giá, thời lượng</td></tr>
+                                <tr><td><strong>doctor_services</strong></td><td>Bảng trung gian N-N</td></tr>
+                                <tr><td><strong>doctor_schedules</strong></td><td>Lịch làm việc theo ngày trong tuần</td></tr>
+                                <tr><td><strong>time_slots</strong></td><td>Khung giờ khám (version lock)</td></tr>
+                                <tr><td><strong>bookings</strong></td><td>Lịch hẹn khám chi tiết</td></tr>
+                                <tr><td><strong>booking_status_history</strong></td><td>Lịch sử thay đổi trạng thái</td></tr>
+                            </tbody>
+                        </table>
+                        <h3 style="margin-top: 14px;">Nhóm Hỗ trợ</h3>
+                        <table>
+                            <thead><tr><th>Bảng</th><th>Mô tả</th></tr></thead>
+                            <tbody>
+                                <tr><td><strong>reviews</strong></td><td>Đánh giá & phản hồi bác sĩ</td></tr>
+                                <tr><td><strong>notifications</strong></td><td>Thông báo real-time</td></tr>
+                                <tr><td><strong>audit_logs</strong></td><td>Nhật ký thao tác hệ thống</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ==================== SLIDE 7: GOOGLE + FACEBOOK LOGIN ==================== -->
+            <section>
+                <span class="slide-number-tag">06 — TÍNH NĂNG</span>
+                <h2>Đăng nhập Google — Facebook thông minh</h2>
+                <div class="divider"></div>
+                <div class="grid-2">
+                    <div>
+                        <h3>Luồng xác thực đa nền tảng</h3>
+                        <div class="seq-step">
+                            <div class="seq-num">1</div>
+                            <div class="seq-content">Người dùng chọn <strong>"Google"</strong> hoặc <strong>"Facebook"</strong></div>
+                        </div>
+                        <div class="seq-step">
+                            <div class="seq-num">2</div>
+                            <div class="seq-content">Flutter gửi <strong>idToken / accessToken</strong> lên Auth-Service</div>
+                        </div>
+                        <div class="seq-step">
+                            <div class="seq-num">3</div>
+                            <div class="seq-content">Backend xác minh với <strong>Google/Facebook OAuth 2.0</strong></div>
+                        </div>
+                        <div class="seq-step">
+                            <div class="seq-num">4</div>
+                            <div class="seq-content">Tạo/cập nhật tài khoản → Trả về <strong>JWT Token</strong></div>
+                        </div>
+                        <div class="seq-step">
+                            <div class="seq-num">5</div>
+                            <div class="seq-content">Token lưu vào <strong>Secure Storage</strong> (mã hoá AES)</div>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-title"><i class="fas fa-shield-alt"></i> Xử lý Cache thông minh</div>
+                        <div class="card-body">
+                            <p style="font-size: 0.95em; margin-bottom: 10px;">Khắc phục lỗi đăng nhập đè tài khoản:</p>
+                            <div class="code-block">
+<span class="comment">// Xoá cache trước khi đăng nhập mới</span>
+ref.<span class="function">invalidate</span>(userProvider);
+<span class="keyword">await</span> secureStorage.<span class="function">deleteAll</span>();
+
+<span class="comment">// Đăng nhập mới an toàn</span>
+<span class="keyword">final</span> credential = <span class="keyword">await</span>
+  GoogleSignIn().<span class="function">signIn</span>();
+<span class="comment">// hoặc</span>
+<span class="keyword">final</span> result = <span class="keyword">await</span>
+  FacebookAuth.instance.<span class="function">login</span>();
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ==================== SLIDE 8: PESSIMISTIC LOCK ==================== -->
+            <section>
+                <span class="slide-number-tag">07 — TÍNH NĂNG</span>
+                <h2>Cơ chế Pessimistic Lock — Chống đặt trùng</h2>
+                <div class="divider"></div>
+
+                <div class="grid-2">
+                    <div>
+                        <h3>Vấn đề: Race Condition</h3>
+                        <p style="margin-bottom: 14px;">Khi 2 bệnh nhân cùng bấm đặt <strong>một khung giờ</strong> gần như đồng thời, nếu không xử lý → cả 2 đều đặt thành công → <strong>xung đột dữ liệu</strong>.</p>
+
+                        <h3>Giải pháp: Pessimistic Write Lock</h3>
+                        <div class="code-block">
+<span class="comment">// Repository - khoá hàng cơ sở dữ liệu</span>
+<span class="annotation">@Lock</span>(<span class="type">LockModeType</span>.PESSIMISTIC_WRITE)
+<span class="annotation">@Query</span>(<span class="string">"SELECT t FROM TimeSlot t WHERE t.id = :id"</span>)
+Optional&lt;<span class="type">TimeSlot</span>&gt; <span class="function">findByIdWithLock</span>(UUID id);
+
+<span class="comment">// Service - Transaction Serializable</span>
+<span class="annotation">@Transactional</span>(isolation = <span class="type">Isolation</span>.SERIALIZABLE)
+<span class="keyword">public</span> <span class="type">Booking</span> <span class="function">createBooking</span>(...) {
+    <span class="type">TimeSlot</span> slot = repo.<span class="function">findByIdWithLock</span>(id);
+    <span class="comment">// Block mọi request khác...</span>
+}
+                        </div>
+                    </div>
+                    <div>
+                        <h3>Cơ chế hoạt động</h3>
+                        <div class="lock-diagram" style="flex-direction: column;">
+                            <div class="lock-column success">
+                                <div class="lc-icon">👤 A</div>
+                                <div class="lc-label">Request #1 — Đặt thành công ✅</div>
+                                <div class="lc-desc">Được lock trước → Kiểm tra slot trống → Đặt lịch → Commit → Release lock</div>
+                            </div>
+                            <div style="text-align: center; font-size: 0.7em; color: var(--text-muted); padding: 4px 0;">
+                                ⬇️ Lock được giải phóng
+                            </div>
+                            <div class="lock-column locked">
+                                <div class="lc-icon">👤 B</div>
+                                <div class="lc-label">Request #2 — Bị từ chối ❌</div>
+                                <div class="lc-desc">Phải chờ lock → Khi vào thấy slot đã booked → Trả lỗi "Khung giờ đã được đặt"</div>
+                            </div>
+                        </div>
+
+                        <div class="feature-highlight" style="margin-top: 12px;">
+                            <div class="fh-title">🔒 Bảo vệ 2 lớp</div>
+                            <div class="fh-desc">
+                                <strong>Pessimistic Lock</strong> (DB row-level) + <strong>Optimistic Lock</strong> (@Version) → Đảm bảo 100% không xung đột.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ==================== SLIDE 9: TƯ VẤN TRỰC TUYẾN ==================== -->
+            <section>
+                <span class="slide-number-tag">08 — TÍNH NĂNG</span>
+                <h2>Tư vấn trực tuyến cùng bác sĩ</h2>
+                <div class="divider"></div>
+                <div class="grid-2">
+                    <div>
+                        <h3>Chat Real-time</h3>
+                        <ul>
+                            <li>Bệnh nhân nhắn tin <strong>trực tiếp</strong> với bác sĩ từ app mobile</li>
+                            <li>Bác sĩ phản hồi từ <strong>web dashboard</strong> chuyên dụng</li>
+                            <li>Lịch sử chat được lưu trữ đầy đủ</li>
+                            <li>Giao diện bong bóng chat hiện đại, thân thiện</li>
+                        </ul>
+
+                        <div class="feature-highlight" style="margin-top: 14px;">
+                            <div class="fh-title">💬 Kiến trúc Chat</div>
+                            <div class="fh-desc">
+                                <strong>App bệnh nhân</strong> (Flutter Mobile) ↔ <strong>Backend API</strong> ↔ <strong>Web bác sĩ</strong> (Flutter Web). Tin nhắn được đồng bộ qua REST API kết hợp polling / real-time sync.
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card" style="text-align: center;">
+                        <div class="card-title" style="justify-content: center;"><i class="fas fa-comments"></i> Demo giao diện chat</div>
+                        <div class="card-body" style="text-align: left;">
+                            <div style="background: rgba(41,126,255,0.12); padding: 10px 14px; border-radius: 14px 14px 14px 4px; margin-bottom: 8px; font-size: 0.88em;">
+                                👨‍⚕️ <strong>BS. Nguyễn Văn An</strong><br>
+                                Chào bạn, tôi đã xem qua triệu chứng. Bạn có thể mô tả thêm không?
+                            </div>
+                            <div style="background: rgba(255,255,255,0.08); padding: 10px 14px; border-radius: 14px 14px 4px 14px; margin-bottom: 8px; font-size: 0.88em; text-align: right;">
+                                Dạ em bị đau đầu khoảng 3 ngày rồi ạ, uống thuốc không đỡ.
+                            </div>
+                            <div style="background: rgba(41,126,255,0.12); padding: 10px 14px; border-radius: 14px 14px 14px 4px; margin-bottom: 8px; font-size: 0.88em;">
+                                👨‍⚕️ Trường hợp này nên đến khám trực tiếp. Bạn có thể đặt lịch khám buổi sáng mai nhé!
+                            </div>
+                            <div style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 10px; display: flex; align-items: center; gap: 8px;">
+                                <div style="flex: 1; background: rgba(255,255,255,0.05); padding: 8px 14px; border-radius: 20px; font-size: 0.8em; color: var(--text-muted);">Nhập tin nhắn...</div>
+                                <div style="width: 32px; height: 32px; border-radius: 50%; background: var(--primary); display: flex; align-items: center; justify-content: center;">
+                                    <i class="fas fa-paper-plane" style="font-size: 0.7em; color: #fff;"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ==================== SLIDE 10: WEB BÁC SĨ & ADMIN ==================== -->
+            <section>
+                <span class="slide-number-tag">09 — ĐA NỀN TẢNG</span>
+                <h2>Web Bác sĩ & Web Quản trị viên</h2>
+                <div class="divider"></div>
+                <div class="grid-2">
+                    <div class="card">
+                        <div class="card-title"><i class="fas fa-laptop-medical"></i> Web Bác sĩ (Flutter Web)</div>
+                        <div class="card-body">
+                            <div style="margin-bottom: 10px;">
+                                <span class="badge badge-green">Dashboard</span>
+                                <span class="badge badge-green">Booking</span>
+                                <span class="badge badge-green">Chat</span>
+                                <span class="badge badge-green">Schedule</span>
+                                <span class="badge badge-green">Profile</span>
+                                <span class="badge badge-green">Review</span>
+                                <span class="badge badge-green">Notification</span>
+                            </div>
+                            <ul>
+                                <li>Dashboard thống kê lịch hẹn hôm nay</li>
+                                <li>Quản lý ca khám & trạng thái booking</li>
+                                <li>Chat trực tuyến với bệnh nhân</li>
+                                <li>Xem & phản hồi đánh giá</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-title"><i class="fas fa-cogs"></i> Web Admin (Flutter Web)</div>
+                        <div class="card-body">
+                            <div style="margin-bottom: 10px;">
+                                <span class="badge badge-orange">Dashboard</span>
+                                <span class="badge badge-orange">Doctors</span>
+                                <span class="badge badge-orange">Patients</span>
+                                <span class="badge badge-orange">Bookings</span>
+                                <span class="badge badge-orange">Services</span>
+                                <span class="badge badge-orange">Schedules</span>
+                                <span class="badge badge-orange">Revenue</span>
+                            </div>
+                            <ul>
+                                <li>Dashboard tổng quan toàn hệ thống</li>
+                                <li>Quản lý CRUD bác sĩ, bệnh nhân, dịch vụ</li>
+                                <li>Quản lý lịch khám & ca làm việc</li>
+                                <li>Thống kê doanh thu & báo cáo</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                <div class="feature-highlight">
+                    <div class="fh-title">🌐 Cùng codebase, nhiều nền tảng</div>
+                    <div class="fh-desc">
+                        Tất cả 3 ứng dụng (Mobile bệnh nhân, Web bác sĩ, Web admin) đều viết bằng <strong>Flutter/Dart</strong> và kết nối chung một <strong>Backend Microservices</strong>, đảm bảo tính nhất quán dữ liệu.
+                    </div>
+                </div>
+            </section>
+
+            <!-- ==================== SLIDE 11: EMAIL & QR ==================== -->
+            <section>
+                <span class="slide-number-tag">10 — TÍNH NĂNG</span>
+                <h2>Email xác thực & Lịch hẹn kèm QR Code</h2>
+                <div class="divider"></div>
+                <div class="grid-2">
+                    <div class="card">
+                        <div class="card-title"><i class="fas fa-envelope-open-text"></i> Email xác thực OTP</div>
+                        <div class="card-body">
+                            <ul>
+                                <li>Template HTML cao cấp với brand colors</li>
+                                <li>Mã OTP <strong>6 số</strong> nổi bật, dễ đọc</li>
+                                <li>Hết hạn sau <strong>10 phút</strong></li>
+                                <li>Font sans-serif hiện đại, responsive email</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-title"><i class="fas fa-qrcode"></i> Email xác nhận đặt lịch</div>
+                        <div class="card-body">
+                            <ul>
+                                <li>Thông tin chi tiết: Bác sĩ, dịch vụ, ngày giờ</li>
+                                <li><strong>QR Code động</strong> — Google Chart API</li>
+                                <li>Bệnh nhân scan QR tại lễ tân để check-in</li>
+                                <li>Trạng thái cập nhật real-time</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                <div class="feature-highlight">
+                    <div class="fh-title">📧 Công nghệ gửi Email</div>
+                    <div class="fh-desc">
+                        <strong>Spring JavaMail</strong> + <code>MimeMessageHelper.setText(html, true)</code> render HTML template. QR Code tạo động: <code>chart.googleapis.com/chart?cht=qr&chs=200x200&chl={bookingId}</code>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ==================== SLIDE 12: BOOKING THÔNG MINH ==================== -->
+            <section>
+                <span class="slide-number-tag">11 — TÍNH NĂNG</span>
+                <h2>Đặt lịch thông minh & Lọc giờ quá khứ</h2>
+                <div class="divider"></div>
+                <div class="grid-2">
+                    <div>
+                        <h3>Tính năng nổi bật</h3>
+                        <ul>
+                            <li>Hiển thị ca khám khả dụng trong <strong>7 ngày tới</strong></li>
+                            <li>Tự động lọc khung giờ đã qua nếu chọn <strong>"Hôm nay"</strong></li>
+                            <li>Giao diện chọn ngày cuộn ngang trực quan</li>
+                            <li>Xác nhận gửi <strong>Email + QR Code</strong> tức thì</li>
+                        </ul>
+
+                        <div class="feature-highlight" style="margin-top: 14px;">
+                            <div class="fh-title">⏰ Bộ lọc thời gian thực</div>
+                            <div class="fh-desc">
+                                So sánh <code>TimeOfDay.now()</code> với giờ bắt đầu mỗi ca khám. Nếu đã trôi qua → tự động ẩn, không cho đặt lịch trong quá khứ.
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-title"><i class="fas fa-code"></i> Logic lọc giờ (Flutter)</div>
+                        <div class="card-body">
+                            <div class="code-block">
+<span class="keyword">if</span> (selectedDate == today) {
+  <span class="keyword">final</span> now = <span class="type">TimeOfDay</span>.<span class="function">now</span>();
+  slots = slots.<span class="function">where</span>((slot) {
+    <span class="keyword">final</span> parts = slot.startTime
+      .<span class="function">split</span>(<span class="string">':'</span>);
+    <span class="keyword">final</span> slotTime = <span class="type">TimeOfDay</span>(
+      hour: <span class="function">int.parse</span>(parts[0]),
+      minute: <span class="function">int.parse</span>(parts[1]),
+    );
+    <span class="keyword">return</span> slotTime.hour > now.hour
+      || (slotTime.hour == now.hour
+      && slotTime.minute > now.minute);
+  }).<span class="function">toList</span>();
+}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ==================== SLIDE 13: CHATBOT AI ==================== -->
+            <section>
+                <span class="slide-number-tag">12 — TÍNH NĂNG BỔ SUNG</span>
+                <h2>Trợ lý ảo tư vấn sức khỏe AI (Chatbot)</h2>
+                <div class="divider"></div>
+                <div class="grid-2">
+                    <div>
+                        <h3>Công nghệ Gemini 2.5 Flash</h3>
+                        <ul>
+                            <li>Gọi API <strong>Google Gemini 2.5 Flash</strong> qua REST</li>
+                            <li>System Prompt: AI trả lời như bác sĩ bằng <strong>tiếng Việt</strong></li>
+                            <li>Output JSON: <strong>reply</strong> + <strong>suggestedSpecialty</strong></li>
+                            <li>Gợi ý 1 trong 5 chuyên khoa khả dụng</li>
+                        </ul>
+                        <h3 style="margin-top: 14px;">Offline Fallback</h3>
+                        <ul>
+                            <li>Mất mạng → <strong>Local Keyword Matcher</strong> (Java)</li>
+                            <li>"đau răng" → Răng Hàm Mặt</li>
+                            <li>"đau ngực" → Tim mạch</li>
+                            <li>Chatbot luôn phản hồi <strong>100%</strong></li>
+                        </ul>
+                    </div>
+                    <div class="card" style="text-align: center;">
+                        <div class="card-title" style="justify-content: center;"><i class="fas fa-robot"></i> Demo Chatbot AI</div>
+                        <div class="card-body" style="text-align: left;">
+                            <div style="background: rgba(41,126,255,0.12); padding: 10px 14px; border-radius: 14px 14px 14px 4px; margin-bottom: 8px; font-size: 0.88em;">
+                                🤖 Xin chào! Tôi là trợ lý sức khỏe MediBook. Bạn đang gặp vấn đề gì?
+                            </div>
+                            <div style="background: rgba(255,255,255,0.08); padding: 10px 14px; border-radius: 14px 14px 4px 14px; margin-bottom: 8px; font-size: 0.88em; text-align: right;">
+                                Tôi bị đau đầu và chóng mặt từ sáng
+                            </div>
+                            <div style="background: rgba(41,126,255,0.12); padding: 10px 14px; border-radius: 14px 14px 14px 4px; margin-bottom: 8px; font-size: 0.88em;">
+                                🤖 Triệu chứng đau đầu kèm chóng mặt có thể liên quan đến huyết áp hoặc thần kinh...
+                            </div>
+                            <div style="background: rgba(0,212,170,0.12); border: 1px solid rgba(0,212,170,0.3); padding: 10px 14px; border-radius: 10px; font-size: 0.82em; text-align: center;">
+                                🏥 Gợi ý: <strong>Nội tổng quát</strong><br>
+                                <span style="display: inline-block; margin-top: 5px; padding: 3px 14px; background: var(--accent); color: #000; border-radius: 8px; font-weight: 600; font-size: 0.85em;">Đặt lịch ngay →</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ==================== SLIDE 14: THÔNG BÁO ==================== -->
+            <section>
+                <span class="slide-number-tag">13 — TÍNH NĂNG BỔ SUNG</span>
+                <h2>Đồng bộ thông báo thời gian thực</h2>
+                <div class="divider"></div>
+                <div class="grid-2">
+                    <div>
+                        <h3>Tính năng</h3>
+                        <ul>
+                            <li>Đồng bộ trạng thái từ <strong>PostgreSQL (Supabase)</strong></li>
+                            <li>Pull-to-refresh kéo để làm mới</li>
+                            <li>Thời gian động: <strong>"5 phút trước"</strong>, <strong>"Hôm qua"</strong></li>
+                            <li>Đánh dấu đã đọc (Mark as read)</li>
+                            <li>Badge đếm số thông báo chưa đọc</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h3>Loại thông báo</h3>
+                        <div class="grid-2" style="margin-top: 8px;">
+                            <div class="card" style="padding: 12px;">
+                                <div class="card-title" style="font-size: 0.62em;"><i class="fas fa-check-circle" style="color: var(--accent);"></i> Xác nhận</div>
+                                <div class="card-body" style="font-size: 0.55em;">Lịch hẹn được duyệt</div>
+                            </div>
+                            <div class="card" style="padding: 12px;">
+                                <div class="card-title" style="font-size: 0.62em;"><i class="fas fa-clock" style="color: #e5c07b;"></i> Nhắc nhở</div>
+                                <div class="card-body" style="font-size: 0.55em;">Sắp đến giờ khám</div>
+                            </div>
+                            <div class="card" style="padding: 12px;">
+                                <div class="card-title" style="font-size: 0.62em;"><i class="fas fa-times-circle" style="color: #f5576c;"></i> Hủy bỏ</div>
+                                <div class="card-body" style="font-size: 0.55em;">Lịch hẹn bị từ chối</div>
+                            </div>
+                            <div class="card" style="padding: 12px;">
+                                <div class="card-title" style="font-size: 0.62em;"><i class="fas fa-info-circle" style="color: var(--primary);"></i> Hệ thống</div>
+                                <div class="card-body" style="font-size: 0.55em;">Cập nhật chung</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ==================== SLIDE 15: KẾT QUẢ ==================== -->
+            <section>
+                <span class="slide-number-tag">14 — KẾT QUẢ</span>
+                <h2>Kết quả đạt được</h2>
+                <div class="divider"></div>
+                <div class="grid-4">
+                    <div class="card stat-box">
+                        <div class="stat-number">7</div>
+                        <div class="stat-label">Services Backend</div>
+                    </div>
+                    <div class="card stat-box">
+                        <div class="stat-number">3</div>
+                        <div class="stat-label">Nền tảng Client</div>
+                    </div>
+                    <div class="card stat-box">
+                        <div class="stat-number">14</div>
+                        <div class="stat-label">Bảng Database</div>
+                    </div>
+                    <div class="card stat-box">
+                        <div class="stat-number">AI</div>
+                        <div class="stat-label">Gemini 2.5 Flash</div>
+                    </div>
+                </div>
+                <div class="grid-3" style="margin-top: 16px;">
+                    <div class="card">
+                        <div class="card-title"><i class="fas fa-mobile-alt"></i> App Bệnh nhân</div>
+                        <div class="card-body">
+                            <ul>
+                                <li>Giao diện UX/UI hiện đại, mượt mà</li>
+                                <li>Đặt lịch, chat AI, chat bác sĩ</li>
+                                <li>Thông báo & QR Code</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-title"><i class="fas fa-laptop-medical"></i> Web Bác sĩ</div>
+                        <div class="card-body">
+                            <ul>
+                                <li>Dashboard quản lý lịch hẹn</li>
+                                <li>Tư vấn trực tuyến với bệnh nhân</li>
+                                <li>Quản lý ca làm việc</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-title"><i class="fas fa-cogs"></i> Web Admin</div>
+                        <div class="card-body">
+                            <ul>
+                                <li>Quản trị toàn bộ hệ thống</li>
+                                <li>CRUD bác sĩ, bệnh nhân, dịch vụ</li>
+                                <li>Thống kê doanh thu</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ==================== SLIDE 16: HƯỚNG PHÁT TRIỂN ==================== -->
+            <section>
+                <span class="slide-number-tag">15 — HƯỚNG PHÁT TRIỂN</span>
+                <h2>Hướng phát triển tiếp theo</h2>
+                <div class="divider"></div>
+                <div class="grid-3">
+                    <div class="card" style="text-align: center; padding: 28px 18px;">
+                        <div style="font-size: 2em; margin-bottom: 12px;">📋</div>
+                        <div class="card-title" style="justify-content: center; font-size: 0.68em;">Hồ sơ bệnh án điện tử</div>
+                        <div class="card-body" style="text-align: center; font-size: 0.55em;">
+                            Tích hợp EHR đồng bộ giữa bệnh nhân và bác sĩ, lưu trữ lịch sử khám chi tiết.
+                        </div>
+                    </div>
+                    <div class="card" style="text-align: center; padding: 28px 18px;">
+                        <div style="font-size: 2em; margin-bottom: 12px;">📹</div>
+                        <div class="card-title" style="justify-content: center; font-size: 0.68em;">Video call tư vấn từ xa</div>
+                        <div class="card-body" style="text-align: center; font-size: 0.55em;">
+                            Gọi video trực tiếp giữa bệnh nhân và bác sĩ qua ứng dụng (Telemedicine).
+                        </div>
+                    </div>
+                    <div class="card" style="text-align: center; padding: 28px 18px;">
+                        <div style="font-size: 2em; margin-bottom: 12px;">💳</div>
+                        <div class="card-title" style="justify-content: center; font-size: 0.68em;">Thanh toán trực tuyến</div>
+                        <div class="card-body" style="text-align: center; font-size: 0.55em;">
+                            Tích hợp ví điện tử MoMo, VNPay để thanh toán viện phí nhanh chóng.
+                        </div>
+                    </div>
+                </div>
+                <div class="feature-highlight" style="margin-top: 20px;">
+                    <div class="fh-title">🚀 Tiềm năng mở rộng</div>
+                    <div class="fh-desc">
+                        Kiến trúc Microservices cho phép dễ dàng bổ sung dịch vụ mới mà không ảnh hưởng hệ thống hiện tại. Mỗi tính năng mới chỉ cần thêm một service riêng biệt.
+                    </div>
+                </div>
+            </section>
+
+            <!-- ==================== SLIDE 17: CẢM ƠN ==================== -->
+            <section class="ending-slide">
+                <div class="logo-icon" style="margin-bottom: 28px;">
+                    <i class="fas fa-heartbeat"></i>
+                </div>
+                <h1>CẢM ƠN QUÝ <span class="highlight-text">THẦY CÔ</span></h1>
+                <p style="margin-top: 12px;">đã lắng nghe bài trình bày</p>
+                <div class="divider" style="margin: 22px auto;"></div>
+                <p style="font-size: 0.65em; color: var(--primary-light);">
+                    <i class="fas fa-graduation-cap"></i> &nbsp; Đồ án tốt nghiệp — Xây dựng hệ thống đặt lịch khám và tư vấn trực tuyến đa nền tảng
+                </p>
+                <div style="margin-top: 35px; display: flex; gap: 30px; justify-content: center;">
+                    <div style="text-align: center;">
+                        <i class="fas fa-user" style="color: var(--primary); font-size: 1.1em;"></i>
+                        <p style="font-size: 0.52em; margin-top: 4px;">Chu Tuấn Kiệt</p>
+                    </div>
+                    <div style="text-align: center;">
+                        <i class="fas fa-chalkboard-teacher" style="color: var(--primary); font-size: 1.1em;"></i>
+                        <p style="font-size: 0.52em; margin-top: 4px;">GVHD: TS. Lý Anh Tuấn</p>
+                    </div>
+                    <div style="text-align: center;">
+                        <i class="fab fa-github" style="color: var(--primary); font-size: 1.1em;"></i>
+                        <p style="font-size: 0.52em; margin-top: 4px;">GitHub Repository</p>
+                    </div>
+                </div>
+            </section>
+
+        </div>
+    </div>
+
+    <!-- Reveal.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.min.js"></script>
+    <script>
+        Reveal.initialize({
+            hash: true,
+            slideNumber: 'c/t',
+            width: 1280,
+            height: 720,
+            margin: 0.04,
+            transition: 'slide',
+            transitionSpeed: 'default',
+            backgroundTransition: 'fade',
+            center: false,
+            progress: true,
+            controls: true,
+            controlsTutorial: false,
+            keyboard: true,
+            overview: true,
+            touch: true,
+        });
+    </script>
+</body>
+</html>

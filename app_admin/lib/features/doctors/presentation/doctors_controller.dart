@@ -26,13 +26,19 @@ class DoctorsController extends AsyncNotifier<List<DoctorDto>> {
     state = await AsyncValue.guard(() => _fetchDoctors());
   }
 
-  Future<void> createDoctor(Map<String, dynamic> data) async {
+  /// Tạo bác sĩ mới với tài khoản đăng nhập
+  /// data cần có: email, password, fullName, specialty, phone, ...
+  Future<Map<String, dynamic>?> createDoctor(Map<String, dynamic> data) async {
     final api = ref.read(doctorsApiProvider);
     state = const AsyncValue.loading();
-    state = await AsyncValue.guard(() async {
-      await api.createDoctor(data);
-      return _fetchDoctors();
-    });
+    try {
+      final result = await api.createDoctorWithAccount(data);
+      state = await AsyncValue.guard(() => _fetchDoctors());
+      return result;
+    } catch (e) {
+      state = await AsyncValue.guard(() => _fetchDoctors());
+      rethrow;
+    }
   }
 
   Future<void> updateDoctor(String id, Map<String, dynamic> data) async {

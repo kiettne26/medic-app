@@ -102,7 +102,6 @@ public class DoctorService {
                 .description(request.getDescription())
                 .phone(request.getPhone())
                 .avatarUrl(request.getAvatarUrl())
-                .consultationFee(request.getConsultationFee())
                 .isAvailable(request.getIsAvailable() != null ? request.getIsAvailable() : true)
                 .build();
 
@@ -129,7 +128,6 @@ public class DoctorService {
         doctor.setDescription(request.getDescription());
         doctor.setPhone(request.getPhone());
         doctor.setAvatarUrl(request.getAvatarUrl());
-        doctor.setConsultationFee(request.getConsultationFee());
         if (request.getIsAvailable() != null) {
             doctor.setIsAvailable(request.getIsAvailable());
         }
@@ -172,6 +170,30 @@ public class DoctorService {
     }
 
     /**
+     * Cập nhật trạng thái online/offline của bác sĩ theo Doctor ID
+     */
+    @Transactional
+    public void updateOnlineStatus(UUID doctorId, boolean isOnline) {
+        Doctor doctor = doctorRepository.findById(doctorId)
+                .orElseThrow(() -> new ResourceNotFoundException("Doctor", "id", doctorId));
+        doctor.setIsAvailable(isOnline);
+        doctorRepository.save(doctor);
+        log.info("Doctor online status updated: id={}, isOnline={}", doctorId, isOnline);
+    }
+
+    /**
+     * Cập nhật trạng thái online/offline của bác sĩ theo User ID
+     */
+    @Transactional
+    public void updateOnlineStatusByUserId(UUID userId, boolean isOnline) {
+        Doctor doctor = doctorRepository.findByUserId(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Doctor", "userId", userId));
+        doctor.setIsAvailable(isOnline);
+        doctorRepository.save(doctor);
+        log.info("Doctor online status updated: userId={}, isOnline={}", userId, isOnline);
+    }
+
+    /**
      * Convert entity to DTO
      */
     private DoctorDto toDto(Doctor doctor) {
@@ -199,7 +221,6 @@ public class DoctorService {
                 .rating(doctor.getRating())
                 .totalReviews(doctor.getTotalReviews())
                 .isAvailable(doctor.getIsAvailable())
-                .consultationFee(doctor.getConsultationFee())
                 .services(serviceDtos)
                 .build();
     }

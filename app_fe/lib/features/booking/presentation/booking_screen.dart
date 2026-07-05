@@ -4,7 +4,10 @@ import 'package:go_router/go_router.dart';
 import '../../profile/presentation/user_provider.dart';
 import '../data/dto/booking_dto.dart';
 import 'booking_list_controller.dart';
+import 'widgets/doctor_avatar.dart';
 import 'package:intl/intl.dart';
+import '../data/booking_repository.dart';
+import '../../home/presentation/home_controller.dart';
 
 class BookingScreen extends ConsumerStatefulWidget {
   const BookingScreen({super.key});
@@ -37,6 +40,107 @@ class _BookingScreenState extends ConsumerState<BookingScreen>
     WidgetsBinding.instance.removeObserver(this);
     _tabController.dispose();
     super.dispose();
+  }
+
+  Future<void> _cancelBooking(BookingDto booking) async {
+    final reasonController = TextEditingController();
+    
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Hủy lịch khám', style: TextStyle(fontWeight: FontWeight.bold)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Bạn có chắc chắn muốn hủy lịch khám này không?'),
+            const SizedBox(height: 12),
+            TextField(
+              controller: reasonController,
+              decoration: InputDecoration(
+                labelText: 'Lý do hủy (không bắt buộc)',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                hintText: 'Nhập lý do hủy tại đây...',
+              ),
+              maxLines: 2,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Quay lại', style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFFF5252),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            child: const Text('Xác nhận hủy', style: TextStyle(fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    try {
+      final reason = reasonController.text.trim().isEmpty 
+          ? 'Bệnh nhân chủ động hủy lịch' 
+          : reasonController.text.trim();
+          
+      final wasPaid = booking.paymentStatus?.toUpperCase() == 'PAID';
+      await ref.read(bookingRepositoryProvider).cancelBooking(booking.id, reason);
+      
+      ref.read(bookingListControllerProvider.notifier).refresh();
+      ref.invalidate(homeControllerProvider);
+
+      if (!mounted) return;
+
+      if (wasPaid) {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            title: const Row(
+              children: [
+                Icon(Icons.info_outline, color: Color(0xFF297EFF)),
+                SizedBox(width: 8),
+                Text('Thông báo hoàn tiền', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+              ],
+            ),
+            content: const Text(
+              'Lịch khám đã được hủy thành công. Vì bạn đã thanh toán trực tuyến trước đó, bộ phận CSKH của MediBook sẽ liên hệ với bạn để thực hiện hoàn tiền trong vòng 24h làm việc. Xin cảm ơn!',
+              style: TextStyle(height: 1.45),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Đồng ý', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF297EFF))),
+              ),
+            ],
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Đã hủy lịch khám thành công.'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Lỗi khi hủy lịch: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   @override
@@ -349,30 +453,12 @@ class _BookingScreenState extends ConsumerState<BookingScreen>
               child: Row(
                 children: [
                   // Avatar bác sĩ
-                  Container(
-                    width: 80,
-                    height: 80,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(12),
-                      color: const Color(0xFF297EFF).withOpacity(0.1),
-                      image:
-                          booking.doctorAvatarUrl != null &&
-                              booking.doctorAvatarUrl!.isNotEmpty
-                          ? DecorationImage(
-                              image: NetworkImage(booking.doctorAvatarUrl!),
-                              fit: BoxFit.cover,
-                            )
-                          : null,
-                    ),
-                    child:
-                        booking.doctorAvatarUrl == null ||
-                            booking.doctorAvatarUrl!.isEmpty
-                        ? const Icon(
-                            Icons.person,
-                            size: 40,
-                            color: Color(0xFF297EFF),
-                          )
-                        : null,
+                  DoctorAvatar(
+                    imageUrl: booking.doctorAvatarUrl,
+                    size: 80,
+                    radius: 12,
+                    backgroundColor: const Color(0xFF297EFF).withOpacity(0.1),
+                    iconColor: const Color(0xFF297EFF),
                   ),
                   const SizedBox(width: 16),
                   Expanded(
@@ -499,11 +585,9 @@ class _BookingScreenState extends ConsumerState<BookingScreen>
                       ),
                     ],
                   ),
-                  if (!isPast && status != 'CANCELED')
+                  if (!isPast && status != 'CANCELED' && status != 'CANCELLED')
                     TextButton(
-                      onPressed: () {
-                        // TODO: Implement cancel logic
-                      },
+                      onPressed: () => _cancelBooking(booking),
                       style: TextButton.styleFrom(
                         backgroundColor: const Color(
                           0xFFFF5252,

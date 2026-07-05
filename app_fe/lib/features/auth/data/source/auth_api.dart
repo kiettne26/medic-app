@@ -20,9 +20,10 @@ class AuthApi {
     }
   }
 
-  Future<void> register(Map<String, dynamic> body) async {
+  Future<AuthResponse> register(Map<String, dynamic> body) async {
     try {
-      await _dio.post('/api/auth/register', data: body);
+      final response = await _dio.post('/api/auth/register', data: body);
+      return AuthResponse.fromJson(response.data['data']);
     } catch (e) {
       rethrow;
     }
@@ -35,6 +36,16 @@ class AuthApi {
     } catch (e) {
       rethrow;
     }
+  }
+
+  Future<void> changePassword({
+    required String oldPassword,
+    required String newPassword,
+  }) async {
+    await _dio.post(
+      '/api/auth/change-password',
+      data: {'oldPassword': oldPassword, 'newPassword': newPassword},
+    );
   }
 }
 

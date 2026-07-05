@@ -4,7 +4,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 final dioProvider = Provider<Dio>((ref) {
   // Development: Use localhost with run_dev.bat (auto-runs adb reverse)
-  final String baseUrl = 'http://localhost:8080';
+  final String baseUrl = 'https://medibook.dpdns.org';
 
   final dio = Dio(
     BaseOptions(

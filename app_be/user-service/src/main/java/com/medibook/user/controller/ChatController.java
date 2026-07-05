@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.PostMapping;
 
 import java.util.UUID;
 
@@ -30,19 +31,15 @@ public class ChatController {
     @MessageMapping("/chat")
     public void processMessage(@Payload ChatMessageDto chatMessage) {
         log.info("Received message: {}", chatMessage);
-
         // Save to DB
         ChatMessageDto saved = chatService.saveMessage(chatMessage);
-
         // Publish to topic: /topic/conversation/{conversationId} for ChatScreen
         messagingTemplate.convertAndSend("/topic/conversation/" + saved.getConversationId(), saved);
-
         // Publish to receiver's notification topic for MessagesScreen real-time update
         if (chatMessage.getReceiverId() != null) {
             messagingTemplate.convertAndSend("/topic/user/" + chatMessage.getReceiverId() + "/notification", saved);
         }
     }
-
     // HTTP Endpoint for history
     @GetMapping("/api/chat/history/{conversationId}")
     @ResponseBody
@@ -87,6 +84,20 @@ public class ChatController {
         } catch (Exception e) {
             log.error("Error getting conversations: {}", e.getMessage());
             return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    @PostMapping("/api/chat/conversation/{conversationId}/read")
+    @ResponseBody
+    public ResponseEntity<Void> markAsRead(
+            @PathVariable String conversationId,
+            @RequestParam String readerId) {
+        try {
+            chatService.markMessagesAsRead(UUID.fromString(conversationId), UUID.fromString(readerId));
+            return ResponseEntity.ok().build();
+        } catch (Exception e) {
+            log.error("Error marking messages as read: {}", e.getMessage());
+            return ResponseEntity.badRequest().build();
         }
     }
 }

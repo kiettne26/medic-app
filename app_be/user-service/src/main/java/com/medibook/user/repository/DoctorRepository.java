@@ -2,6 +2,7 @@ package com.medibook.user.repository;
 
 import com.medibook.user.entity.Doctor;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
@@ -23,4 +24,8 @@ public interface DoctorRepository extends JpaRepository<Doctor, UUID> {
 
     @Query("SELECT d FROM Doctor d WHERE d.isAvailable = true ORDER BY d.rating DESC")
     List<Doctor> findTopRatedDoctors();
+
+    @Modifying
+    @Query("UPDATE Doctor d SET d.isAvailable = false WHERE d.isAvailable = true")
+    void setAllDoctorsOffline();
 }

@@ -7,29 +7,36 @@ part of 'booking_dto.dart';
 // **************************************************************************
 
 BookingDto _$BookingDtoFromJson(Map<String, dynamic> json) => BookingDto(
-      id: json['id'] as String,
-      patientId: json['patientId'] as String?,
-      doctorId: json['doctorId'] as String?,
-      serviceId: json['serviceId'] as String?,
-      timeSlot: json['timeSlot'] == null
-          ? null
-          : TimeSlotDto.fromJson(json['timeSlot'] as Map<String, dynamic>),
-      status: json['status'] as String?,
-      notes: json['notes'] as String?,
-      doctorNotes: json['doctorNotes'] as String?,
-      cancellationReason: json['cancellationReason'] as String?,
-      doctorName: json['doctorName'] as String?,
-      doctorAvatarUrl: json['doctorAvatarUrl'] as String?,
-      serviceName: json['serviceName'] as String?,
-      patientName: json['patientName'] as String?,
-      patientAvatar: json['patientAvatar'] as String?,
-      createdAt: json['createdAt'] == null
-          ? null
-          : DateTime.parse(json['createdAt'] as String),
-      updatedAt: json['updatedAt'] == null
-          ? null
-          : DateTime.parse(json['updatedAt'] as String),
-    );
+  id: json['id'] as String,
+  patientId: json['patientId'] as String?,
+  doctorId: json['doctorId'] as String?,
+  serviceId: json['serviceId'] as String?,
+  timeSlot: json['timeSlot'] == null
+      ? null
+      : TimeSlotDto.fromJson(json['timeSlot'] as Map<String, dynamic>),
+  status: json['status'] as String?,
+  notes: json['notes'] as String?,
+  doctorNotes: json['doctorNotes'] as String?,
+  cancellationReason: json['cancellationReason'] as String?,
+  totalAmount: (json['totalAmount'] as num?)?.toDouble(),
+  paymentStatus: json['paymentStatus'] as String?,
+  paymentMethod: json['paymentMethod'] as String?,
+  paymentReference: json['paymentReference'] as String?,
+  paidAt: json['paidAt'] == null
+      ? null
+      : DateTime.parse(json['paidAt'] as String),
+  doctorName: json['doctorName'] as String?,
+  doctorAvatarUrl: _readDoctorAvatarUrl(json, 'doctorAvatarUrl') as String?,
+  serviceName: json['serviceName'] as String?,
+  patientName: json['patientName'] as String?,
+  patientAvatar: json['patientAvatar'] as String?,
+  createdAt: json['createdAt'] == null
+      ? null
+      : DateTime.parse(json['createdAt'] as String),
+  updatedAt: json['updatedAt'] == null
+      ? null
+      : DateTime.parse(json['updatedAt'] as String),
+);
 
 Map<String, dynamic> _$BookingDtoToJson(BookingDto instance) =>
     <String, dynamic>{
@@ -42,6 +49,11 @@ Map<String, dynamic> _$BookingDtoToJson(BookingDto instance) =>
       'notes': instance.notes,
       'doctorNotes': instance.doctorNotes,
       'cancellationReason': instance.cancellationReason,
+      'totalAmount': instance.totalAmount,
+      'paymentStatus': instance.paymentStatus,
+      'paymentMethod': instance.paymentMethod,
+      'paymentReference': instance.paymentReference,
+      'paidAt': instance.paidAt?.toIso8601String(),
       'doctorName': instance.doctorName,
       'doctorAvatarUrl': instance.doctorAvatarUrl,
       'serviceName': instance.serviceName,
@@ -52,11 +64,11 @@ Map<String, dynamic> _$BookingDtoToJson(BookingDto instance) =>
     };
 
 TimeSlotDto _$TimeSlotDtoFromJson(Map<String, dynamic> json) => TimeSlotDto(
-      id: json['id'] as String,
-      date: DateTime.parse(json['date'] as String),
-      startTime: json['startTime'] as String,
-      endTime: json['endTime'] as String,
-    );
+  id: json['id'] as String,
+  date: DateTime.parse(json['date'] as String),
+  startTime: json['startTime'] as String,
+  endTime: json['endTime'] as String,
+);
 
 Map<String, dynamic> _$TimeSlotDtoToJson(TimeSlotDto instance) =>
     <String, dynamic>{
@@ -67,19 +79,19 @@ Map<String, dynamic> _$TimeSlotDtoToJson(TimeSlotDto instance) =>
     };
 
 CreateBookingRequest _$CreateBookingRequestFromJson(
-        Map<String, dynamic> json) =>
-    CreateBookingRequest(
-      doctorId: json['doctorId'] as String,
-      serviceId: json['serviceId'] as String,
-      timeSlotId: json['timeSlotId'] as String,
-      notes: json['notes'] as String?,
-    );
+  Map<String, dynamic> json,
+) => CreateBookingRequest(
+  doctorId: json['doctorId'] as String,
+  serviceId: json['serviceId'] as String,
+  timeSlotId: json['timeSlotId'] as String,
+  notes: json['notes'] as String?,
+);
 
 Map<String, dynamic> _$CreateBookingRequestToJson(
-        CreateBookingRequest instance) =>
-    <String, dynamic>{
-      'doctorId': instance.doctorId,
-      'serviceId': instance.serviceId,
-      'timeSlotId': instance.timeSlotId,
-      'notes': instance.notes,
-    };
+  CreateBookingRequest instance,
+) => <String, dynamic>{
+  'doctorId': instance.doctorId,
+  'serviceId': instance.serviceId,
+  'timeSlotId': instance.timeSlotId,
+  'notes': instance.notes,
+};

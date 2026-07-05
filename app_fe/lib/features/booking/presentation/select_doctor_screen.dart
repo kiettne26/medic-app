@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../data/dto/service_dto.dart';
 import '../../doctor/data/dto/doctor_dto.dart';
 import '../../doctor/presentation/doctor_controller.dart';
+import 'widgets/doctor_avatar.dart';
 
 class SelectDoctorScreen extends ConsumerStatefulWidget {
   final List<ServiceDto> selectedServices;
@@ -28,19 +29,23 @@ class _SelectDoctorScreenState extends ConsumerState<SelectDoctorScreen> {
     super.initState();
     // Load doctors when screen initializes
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (widget.selectedServices.isNotEmpty) {
-        ref
-            .read(doctorControllerProvider.notifier)
-            .loadDoctorsByService(widget.selectedServices.first.id);
-      } else {
-        ref.read(doctorControllerProvider.notifier).loadDoctors();
-      }
+      _loadDoctorsForSelectedServices();
     });
+  }
+
+  Future<void> _loadDoctorsForSelectedServices() async {
+    final notifier = ref.read(bookingDoctorControllerProvider.notifier);
+    if (widget.selectedServices.isNotEmpty) {
+      await notifier.loadDoctorsByService(widget.selectedServices.first.id);
+    } else {
+      await notifier.loadDoctors();
+    }
+    notifier.filterByCategory('Tất cả');
   }
 
   @override
   Widget build(BuildContext context) {
-    final doctorState = ref.watch(doctorControllerProvider);
+    final doctorState = ref.watch(bookingDoctorControllerProvider);
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7F8),
@@ -163,10 +168,10 @@ class _SelectDoctorScreenState extends ConsumerState<SelectDoctorScreen> {
                 onTap: () {
                   setState(() => _selectedSpecialty = specialty);
                   if (specialty == 'Tất cả') {
-                    ref.read(doctorControllerProvider.notifier).loadDoctors();
+                    _loadDoctorsForSelectedServices();
                   } else {
                     ref
-                        .read(doctorControllerProvider.notifier)
+                        .read(bookingDoctorControllerProvider.notifier)
                         .filterByCategory(specialty);
                   }
                 },
@@ -211,6 +216,8 @@ class _SelectDoctorScreenState extends ConsumerState<SelectDoctorScreen> {
   }
 
   Widget _buildDoctorList(DoctorState state) {
+    final displayDoctors = state.filteredDoctors;
+
     if (state.isLoading) {
       return const Padding(
         padding: EdgeInsets.all(32),
@@ -230,7 +237,7 @@ class _SelectDoctorScreenState extends ConsumerState<SelectDoctorScreen> {
       );
     }
 
-    if (state.doctors.isEmpty) {
+    if (displayDoctors.isEmpty) {
       return const Padding(
         padding: EdgeInsets.all(32),
         child: Center(
@@ -254,7 +261,7 @@ class _SelectDoctorScreenState extends ConsumerState<SelectDoctorScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Bác sĩ (${state.doctors.length})',
+            'Bác sĩ (${displayDoctors.length})',
             style: const TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
@@ -262,7 +269,7 @@ class _SelectDoctorScreenState extends ConsumerState<SelectDoctorScreen> {
             ),
           ),
           const SizedBox(height: 12),
-          ...state.doctors.map((doctor) => _buildDoctorCard(doctor)),
+          ...displayDoctors.map((doctor) => _buildDoctorCard(doctor)),
         ],
       ),
     );
@@ -295,23 +302,12 @@ class _SelectDoctorScreenState extends ConsumerState<SelectDoctorScreen> {
         ),
         child: Row(
           children: [
-            // Doctor Avatar
-            Container(
-              width: 80,
-              height: 80,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(12),
-                color: Colors.grey[200],
-                image: doctor.avatarUrl != null && doctor.avatarUrl!.isNotEmpty
-                    ? DecorationImage(
-                        image: NetworkImage(doctor.avatarUrl!),
-                        fit: BoxFit.cover,
-                      )
-                    : null,
-              ),
-              child: doctor.avatarUrl == null || doctor.avatarUrl!.isEmpty
-                  ? const Icon(Icons.person, size: 40, color: Colors.grey)
-                  : null,
+            DoctorAvatar(
+              imageUrl: doctor.avatarUrl,
+              size: 80,
+              radius: 12,
+              backgroundColor: Colors.grey.shade200,
+              iconColor: Colors.grey,
             ),
             const SizedBox(width: 16),
             // Doctor Info
@@ -438,7 +434,7 @@ class _SelectDoctorScreenState extends ConsumerState<SelectDoctorScreen> {
   Widget _buildBottomBar() {
     final selectedDoctor = _selectedDoctorId != null
         ? ref
-              .read(doctorControllerProvider)
+              .read(bookingDoctorControllerProvider)
               .doctors
               .firstWhere(
                 (d) => d.id == _selectedDoctorId,

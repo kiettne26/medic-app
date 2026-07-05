@@ -1,5 +1,8 @@
 package com.medibook.notification.service;
 
+import com.medibook.notification.dto.BookingCreatedEmailRequest;
+import com.medibook.notification.dto.BookingStatusNotificationRequest;
+import com.medibook.notification.dto.EmailVerificationEmailRequest;
 import com.medibook.notification.entity.Notification;
 import com.medibook.notification.repository.NotificationRepository;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +27,7 @@ public class NotificationService {
 
     private final NotificationRepository notificationRepository;
     private final SimpMessagingTemplate messagingTemplate;
+    private final EmailService emailService;
 
     /**
      * Tạo và gửi notification
@@ -52,7 +56,7 @@ public class NotificationService {
             log.warn("Failed to send WebSocket notification: {}", e.getMessage());
         }
 
-        // Log email (thay vì gửi thực - vì không có SMTP)
+        // Fallback log for notification events that do not include a recipient email
         logEmail(userId, title, message);
 
         return notification;
@@ -70,7 +74,38 @@ public class NotificationService {
     }
 
     /**
-     * Gửi notification khi lịch được xác nhận
+     * Tao thong bao va gui email xac nhan khi benh nhan dat lich thanh cong.
+     */
+    @Transactional
+    public void sendBookingCreatedConfirmation(BookingCreatedEmailRequest request) {
+        if (request == null) {
+            log.warn("Skip booking confirmation because request body is missing");
+            return;
+        }
+
+        String title = "Đặt lịch thành công";
+        String time = request.getEndTime() != null && !request.getEndTime().isBlank()
+                ? request.getStartTime() + " - " + request.getEndTime()
+                : request.getStartTime();
+        String message = String.format(
+                "Bạn đã đặt lịch khám với bác sĩ %s vào %s lúc %s. Vui lòng chờ xác nhận.",
+                request.getDoctorName(), request.getDate(), time);
+
+        if (request.getPatientId() != null && request.getBookingId() != null) {
+            createAndSend(request.getPatientId(), title, message, "BOOKING_CREATED", request.getBookingId());
+        } else {
+            log.warn("Skip in-app booking notification because patientId or bookingId is missing");
+        }
+
+        emailService.sendBookingCreatedConfirmation(request);
+    }
+
+    public void sendEmailVerificationCode(EmailVerificationEmailRequest request) {
+        emailService.sendEmailVerificationCode(request);
+    }
+
+    /**
+     * Gửi notification khi lịch được xác nhận.
      */
     public void sendBookingConfirmedNotification(UUID patientId, UUID bookingId, String doctorName, String date,
             String time) {
@@ -80,6 +115,20 @@ public class NotificationService {
         createAndSend(patientId, title, message, "BOOKING_CONFIRMED", bookingId);
     }
 
+    public void sendBookingConfirmedNotification(BookingStatusNotificationRequest request) {
+        if (request == null || request.getPatientId() == null || request.getBookingId() == null) {
+            log.warn("Skip confirmed booking notification because request is incomplete");
+            return;
+        }
+
+        sendBookingConfirmedNotification(
+                request.getPatientId(),
+                request.getBookingId(),
+                firstNonBlank(request.getDoctorName(), "bác sĩ"),
+                firstNonBlank(request.getDate(), "ngày đã đặt"),
+                formatTimeRange(request.getStartTime(), request.getEndTime()));
+    }
+
     /**
      * Gửi notification khi lịch bị hủy
      */
@@ -87,6 +136,18 @@ public class NotificationService {
         String title = "Lịch đã bị hủy";
         String message = String.format("Lịch khám đã bị hủy. Lý do: %s", reason);
         createAndSend(userId, title, message, "BOOKING_CANCELLED", bookingId);
+    }
+
+    public void sendBookingCancelledNotification(BookingStatusNotificationRequest request) {
+        if (request == null || request.getPatientId() == null || request.getBookingId() == null) {
+            log.warn("Skip cancelled booking notification because request is incomplete");
+            return;
+        }
+
+        sendBookingCancelledNotification(
+                request.getPatientId(),
+                request.getBookingId(),
+                firstNonBlank(request.getReason(), "Không có lý do cụ thể"));
     }
 
     /**
@@ -141,13 +202,35 @@ public class NotificationService {
     }
 
     /**
-     * Log email thay vì gửi thực (không có SMTP)
+     * Log fallback cho notification chua co email nguoi nhan.
      */
     private void logEmail(UUID userId, String subject, String body) {
-        log.info("📧 EMAIL LOG (không gửi thực vì không có SMTP)");
+        log.info("EMAIL FALLBACK LOG");
         log.info("To: User {}", userId);
         log.info("Subject: {}", subject);
         log.info("Body: {}", body);
         log.info("---");
+    }
+
+    private String formatTimeRange(String startTime, String endTime) {
+        if (startTime == null || startTime.isBlank()) {
+            return "giờ đã đặt";
+        }
+        if (endTime == null || endTime.isBlank()) {
+            return startTime;
+        }
+        return startTime + " - " + endTime;
+    }
+
+    private String firstNonBlank(String... values) {
+        if (values == null) {
+            return null;
+        }
+        for (String value : values) {
+            if (value != null && !value.isBlank()) {
+                return value;
+            }
+        }
+        return null;
     }
 }

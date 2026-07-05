@@ -3,6 +3,10 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:app_fe/features/auth/presentation/auth_controller.dart';
 import 'package:app_fe/config/router.dart';
+import 'package:app_fe/features/home/presentation/home_controller.dart';
+import 'package:app_fe/features/notification/presentation/notification_provider.dart';
+import 'package:app_fe/features/booking/presentation/booking_list_controller.dart';
+import 'package:app_fe/features/chatbot/presentation/chatbot_provider.dart';
 import '../presentation/user_provider.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
@@ -13,8 +17,6 @@ class ProfileScreen extends ConsumerStatefulWidget {
 }
 
 class _ProfileScreenState extends ConsumerState<ProfileScreen> {
-  String _userEmail = 'user@example.com';
-
   @override
   void initState() {
     super.initState();
@@ -29,9 +31,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final userState = ref.watch(userProvider);
     final userName = userState.name;
     final userAvatar = userState.avatar;
+    final theme = Theme.of(context);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7F8), // background-light
+      backgroundColor: theme.scaffoldBackgroundColor,
       body: SafeArea(
         child: Column(
           children: [
@@ -45,7 +48,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   children: [
                     const SizedBox(height: 16), // Reduced from 24
                     const SizedBox(height: 16), // Reduced from 24
-                    _buildUserInfo(userName, userAvatar, userState.id),
+                    _buildUserInfo(
+                      userName,
+                      userState.email,
+                      userAvatar,
+                      userState.id,
+                    ),
                     const SizedBox(height: 24), // Reduced from 32
                     _buildMenuOptions(),
                     const SizedBox(height: 32), // Reduced from 48
@@ -62,47 +70,41 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   }
 
   Widget _buildHeader(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.8),
-        border: Border(bottom: BorderSide(color: Colors.grey.withOpacity(0.1))),
+        color: colorScheme.surface.withOpacity(0.92),
+        border: Border(
+          bottom: BorderSide(color: colorScheme.outline.withOpacity(0.14)),
+        ),
       ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          GestureDetector(
-            onTap: () {
-              // Logic for back if applicable
-            },
-            child: const SizedBox(
-              width: 40,
-              height: 40,
-              child: Icon(
-                Icons.arrow_back_ios,
-                size: 20,
-                color: Color(0xFF101418),
-              ),
+          Text(
+            'Cá nhân',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: colorScheme.onSurface,
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
             ),
           ),
-          const Expanded(
-            child: Text(
-              'Cá nhân',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: Color(0xFF101418),
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-          const SizedBox(width: 40), // Balance the back button
         ],
       ),
     );
   }
 
-  Widget _buildUserInfo(String userName, String userAvatar, String userId) {
+  Widget _buildUserInfo(
+    String userName,
+    String userEmail,
+    String userAvatar,
+    String userId,
+  ) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Column(
       children: [
         Stack(
@@ -134,7 +136,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               decoration: BoxDecoration(
                 color: const Color(0xFF00C853),
                 shape: BoxShape.circle,
-                border: Border.all(color: Colors.white, width: 3),
+                border: Border.all(color: colorScheme.surface, width: 3),
               ),
             ),
           ],
@@ -142,19 +144,19 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         const SizedBox(height: 12), // Reduced from 16
         Text(
           userName,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 20, // Reduced from 24
             fontWeight: FontWeight.bold,
-            color: Color(0xFF101418),
+            color: colorScheme.onSurface,
           ),
         ),
         const SizedBox(height: 2), // Reduced from 4
         Text(
-          _userEmail,
-          style: const TextStyle(
+          userEmail.isNotEmpty ? userEmail : 'Chưa cập nhật email',
+          style: TextStyle(
             fontSize: 14, // Reduced from 16
             fontWeight: FontWeight.w500,
-            color: Color(0xFF5E718D),
+            color: colorScheme.onSurfaceVariant,
           ),
         ),
         const SizedBox(height: 6), // Reduced from 8
@@ -200,7 +202,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             icon: Icons.history_edu,
             label: 'Lịch sử y tế',
             color: const Color(0xFF00C853),
-            onTap: () {},
+            onTap: () {
+              context.push('/medical-history');
+            },
           ),
           const SizedBox(height: 12), // Reduced from 16
           _buildMenuItem(
@@ -218,7 +222,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             label: 'Trợ giúp & Hỗ trợ',
             color: const Color(0xFF5E718D),
             iconBgColor: const Color(0xFFF1F5F9),
-            onTap: () {},
+            onTap: () {
+              context.push('/help-support');
+            },
           ),
         ],
       ),
@@ -232,6 +238,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     Color? iconBgColor,
     required VoidCallback onTap,
   }) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final isDark = colorScheme.brightness == Brightness.dark;
+    final effectiveIconBgColor = iconBgColor != null && !isDark
+        ? iconBgColor
+        : color.withOpacity(0.12);
+
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
@@ -241,11 +253,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           vertical: 12,
         ), // Reduced vertical padding from 16
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: colorScheme.surface,
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.02),
+              color: Colors.black.withOpacity(isDark ? 0 : 0.02),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
@@ -257,7 +269,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               width: 40, // Reduced from 44
               height: 40, // Reduced from 44
               decoration: BoxDecoration(
-                color: iconBgColor ?? color.withOpacity(0.1),
+                color: effectiveIconBgColor,
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Icon(icon, color: color, size: 22), // Reduced icon size
@@ -266,16 +278,16 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             Expanded(
               child: Text(
                 label,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 15, // Reduced from 16
                   fontWeight: FontWeight.w600,
-                  color: Color(0xFF101418),
+                  color: colorScheme.onSurface,
                 ),
               ),
             ),
-            const Icon(
+            Icon(
               Icons.chevron_right,
-              color: Color(0xFFA0AEC0),
+              color: colorScheme.onSurfaceVariant,
               size: 18,
             ), // Reduced size
           ],
@@ -285,6 +297,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   }
 
   Widget _buildLogoutButton(BuildContext context, WidgetRef ref) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final isDark = colorScheme.brightness == Brightness.dark;
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: SizedBox(
@@ -293,14 +308,24 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           onPressed: () async {
             // Call logout to clear tokens
             await ref.read(authControllerProvider.notifier).logout();
+            // Clear user state and all related cache from provider memory
+            ref.invalidate(userProvider);
+            ref.invalidate(homeControllerProvider);
+            ref.invalidate(notificationProvider);
+            ref.invalidate(bookingListControllerProvider);
+            ref.invalidate(chatbotProvider);
             // Navigate to login screen
             if (context.mounted) {
               context.goNamed(AppRoute.login.name);
             }
           },
           style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFFFEE2E2), // error-soft
-            foregroundColor: const Color(0xFFEF4444), // error-text
+            backgroundColor: const Color(
+              0xFFEF4444,
+            ).withOpacity(isDark ? 0.14 : 0.12),
+            foregroundColor: isDark
+                ? const Color(0xFFFCA5A5)
+                : const Color(0xFFEF4444),
             padding: const EdgeInsets.symmetric(
               vertical: 14,
             ), // Reduced from 16

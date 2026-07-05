@@ -1,0 +1,162 @@
+version: '3.8'
+
+services:
+  # ----------------------------------------------------
+  #  1. Eureka Discovery Server
+  # ----------------------------------------------------
+  eureka-server:
+    build:
+      context: .
+      target: eureka-server
+    container_name: eureka-server
+    ports:
+      - "8761:8761"
+    networks:
+      - medic-network
+    restart: always
+    environment:
+      - TZ=Asia/Ho_Chi_Minh
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8761/"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  # ----------------------------------------------------
+  #  2. API Gateway
+  # ----------------------------------------------------
+  api-gateway:
+    build:
+      context: .
+      target: api-gateway
+    container_name: api-gateway
+    ports:
+      - "8080:8080"
+    networks:
+      - medic-network
+    depends_on:
+      eureka-server:
+        condition: service_healthy
+    restart: always
+    env_file:
+      - .env
+    environment:
+      - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://eureka-server:8761/eureka/
+      - TZ=Asia/Ho_Chi_Minh
+
+  # ----------------------------------------------------
+  #  3. Auth Service
+  # ----------------------------------------------------
+  auth-service:
+    build:
+      context: .
+      target: auth-service
+    container_name: auth-service
+    ports:
+      - "8081:8081"
+    networks:
+      - medic-network
+    depends_on:
+      eureka-server:
+        condition: service_healthy
+    restart: always
+    env_file:
+      - .env
+    environment:
+      - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://eureka-server:8761/eureka/
+      - TZ=Asia/Ho_Chi_Minh
+
+  # ----------------------------------------------------
+  #  4. User Service
+  # ----------------------------------------------------
+  user-service:
+    build:
+      context: .
+      target: user-service
+    container_name: user-service
+    ports:
+      - "8082:8082"
+    networks:
+      - medic-network
+    depends_on:
+      eureka-server:
+        condition: service_healthy
+    restart: always
+    env_file:
+      - .env
+    environment:
+      - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://eureka-server:8761/eureka/
+      - NOTIFICATION_SERVICE_URL=http://notification-service:8084
+      - TZ=Asia/Ho_Chi_Minh
+
+  # ----------------------------------------------------
+  #  5. Booking Service
+  # ----------------------------------------------------
+  booking-service:
+    build:
+      context: .
+      target: booking-service
+    container_name: booking-service
+    ports:
+      - "8083:8083"
+    networks:
+      - medic-network
+    depends_on:
+      eureka-server:
+        condition: service_healthy
+    restart: always
+    env_file:
+      - .env
+    environment:
+      - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://eureka-server:8761/eureka/
+      - NOTIFICATION_SERVICE_URL=http://notification-service:8084
+      - TZ=Asia/Ho_Chi_Minh
+
+  # ----------------------------------------------------
+  #  6. Notification Service
+  # ----------------------------------------------------
+  notification-service:
+    build:
+      context: .
+      target: notification-service
+    container_name: notification-service
+    ports:
+      - "8084:8084"
+    networks:
+      - medic-network
+    depends_on:
+      eureka-server:
+        condition: service_healthy
+    restart: always
+    env_file:
+      - .env
+    environment:
+      - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://eureka-server:8761/eureka/
+      - TZ=Asia/Ho_Chi_Minh
+
+  # ----------------------------------------------------
+  #  7. Analytics Service
+  # ----------------------------------------------------
+  analytics-service:
+    build:
+      context: .
+      target: analytics-service
+    container_name: analytics-service
+    ports:
+      - "8085:8085"
+    networks:
+      - medic-network
+    depends_on:
+      eureka-server:
+        condition: service_healthy
+    restart: always
+    env_file:
+      - .env
+    environment:
+      - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://eureka-server:8761/eureka/
+      - TZ=Asia/Ho_Chi_Minh
+
+networks:
+  medic-network:
+    driver: bridge

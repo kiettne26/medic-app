@@ -41,7 +41,7 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
 
     _stompClient = StompClient(
       config: StompConfig.sockJS(
-        url: 'http://localhost:8080/ws',
+        url: 'https://medibook.dpdns.org/ws',
         onConnect: _onStompConnect,
         beforeConnect: () async {
           print('MessagesScreen: Waiting to connect WebSocket...');
@@ -92,7 +92,7 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
       // Call API to get conversations
       final response = await http.get(
         Uri.parse(
-          'http://localhost:8080/api/chat/conversations?userId=$_doctorId&isDoctor=true',
+          'https://medibook.dpdns.org/api/chat/conversations?userId=$_doctorId&isDoctor=true',
         ),
         headers: {'Content-Type': 'application/json'},
       );
@@ -225,8 +225,30 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
                   itemBuilder: (context, index) {
                     final conversation = _conversations[index];
                     return ListTile(
-                      onTap: () {
+                      onTap: () async {
+                        // Cập nhật trạng thái đã đọc trên UI ngay lập tức
+                        setState(() {
+                          final idx = _conversations.indexWhere((c) => c.id == conversation.id);
+                          if (idx != -1) {
+                            _conversations[idx] = conversation.copyWith(unreadCount: 0);
+                          }
+                        });
+
+                        // Chuyển sang màn hình chat chi tiết
                         context.push('/messages/detail', extra: conversation);
+
+                        // Gọi API đánh dấu đã đọc ở backend
+                        try {
+                          final url = Uri.parse(
+                            'https://medibook.dpdns.org/api/chat/conversation/${conversation.id}/read?readerId=$_doctorId',
+                          );
+                          await http.post(url);
+                        } catch (e) {
+                          print('Error marking conversation as read: $e');
+                        }
+
+                        // Tải lại danh sách hội thoại ngầm
+                        _loadConversations(showLoading: false);
                       },
                       contentPadding: const EdgeInsets.symmetric(
                         horizontal: 16,

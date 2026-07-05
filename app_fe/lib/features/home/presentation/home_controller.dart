@@ -47,26 +47,68 @@ class HomeController extends StateNotifier<HomeState> {
   Future<void> loadHomeData() async {
     state = state.copyWith(isLoading: true, errorMessage: null);
     try {
-      // Load featured doctors (top 5 available doctors)
-      final doctors = await _doctorRepository.getAvailableDoctors();
+      // Load featured doctors (top 5 doctors)
+      final doctors = await _doctorRepository.getAllDoctors();
       final featuredDoctors = doctors.take(5).toList();
 
       // Load upcoming booking từ API
       BookingDto? upcomingBooking;
       try {
         final bookings = await _bookingRepository.getMyBookings();
-        // Lọc các booking có status PENDING hoặc CONFIRMED
+        final now = DateTime.now();
+        // Lọc các booking có status PENDING hoặc CONFIRMED và chưa qua thời gian khám
         final upcomingBookings = bookings.where((b) {
           final status = b.status?.toUpperCase();
-          return status == 'PENDING' || status == 'CONFIRMED';
+          if (status != 'PENDING' && status != 'CONFIRMED') {
+            return false;
+          }
+
+          final ts = b.timeSlot;
+          if (ts == null) return false;
+
+          try {
+            final date = ts.date;
+            final parts = ts.startTime.split(':');
+            final hour = int.parse(parts[0]);
+            final minute = int.parse(parts[1]);
+            final slotDateTime = DateTime(
+              date.year,
+              date.month,
+              date.day,
+              hour,
+              minute,
+            );
+            return slotDateTime.isAfter(now);
+          } catch (e) {
+            // Dự phòng: so sánh ngày
+            return ts.date.isAfter(now.subtract(const Duration(days: 1)));
+          }
         }).toList();
 
-        // Sắp xếp theo ngày gần nhất và lấy booking đầu tiên
+        // Sắp xếp theo ngày giờ gần nhất và lấy booking đầu tiên
         if (upcomingBookings.isNotEmpty) {
           upcomingBookings.sort((a, b) {
-            final dateA = a.timeSlot?.date ?? DateTime.now();
-            final dateB = b.timeSlot?.date ?? DateTime.now();
-            return dateA.compareTo(dateB);
+            final tsA = a.timeSlot;
+            final tsB = b.timeSlot;
+            if (tsA == null || tsB == null) return 0;
+
+            try {
+              final dateA = tsA.date;
+              final partsA = tsA.startTime.split(':');
+              final hourA = int.parse(partsA[0]);
+              final minuteA = int.parse(partsA[1]);
+              final dateTimeA = DateTime(dateA.year, dateA.month, dateA.day, hourA, minuteA);
+
+              final dateB = tsB.date;
+              final partsB = tsB.startTime.split(':');
+              final hourB = int.parse(partsB[0]);
+              final minuteB = int.parse(partsB[1]);
+              final dateTimeB = DateTime(dateB.year, dateB.month, dateB.day, hourB, minuteB);
+
+              return dateTimeA.compareTo(dateTimeB);
+            } catch (e) {
+              return tsA.date.compareTo(tsB.date);
+            }
           });
           upcomingBooking = upcomingBookings.first;
         }

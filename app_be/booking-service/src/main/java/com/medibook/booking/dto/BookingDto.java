@@ -1,8 +1,11 @@
 package com.medibook.booking.dto;
 
 import com.medibook.common.enums.BookingStatus;
+import com.medibook.common.enums.PaymentMethod;
+import com.medibook.common.enums.PaymentStatus;
 import lombok.*;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -30,6 +33,11 @@ public class BookingDto {
     private String doctorName;
     private String doctorAvatar;
     private String serviceName;
+    private BigDecimal totalAmount;
+    private PaymentStatus paymentStatus;
+    private PaymentMethod paymentMethod;
+    private String paymentReference;
+    private LocalDateTime paidAt;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 

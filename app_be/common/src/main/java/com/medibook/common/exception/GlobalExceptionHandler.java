@@ -76,6 +76,21 @@ public class GlobalExceptionHandler {
             cause.printStackTrace();
         }
 
+        // Handle database locking, serialization failure or concurrency exceptions
+        if (exceptionName.contains("PessimisticLockingFailure") || 
+            exceptionName.contains("CannotAcquireLock") || 
+            exceptionName.contains("ObjectOptimisticLockingFailure") ||
+            exceptionName.contains("OptimisticLockingFailure") ||
+            message.contains("could not serialize") || 
+            message.contains("concurrent update") ||
+            message.contains("LockAcquisitionException") ||
+            (cause != null && (cause.getMessage().contains("could not serialize") || 
+                               cause.getMessage().contains("concurrent update")))) {
+            return ResponseEntity
+                    .status(HttpStatus.CONFLICT)
+                    .body(ApiResponse.error("Lịch khám này đã được đặt trước. Vui lòng chọn khung giờ khác."));
+        }
+
         // Handle BadCredentials (Spring Security) without dependency
         if (exceptionName.equals("BadCredentialsException") || message.contains("Bad credentials")) {
             return ResponseEntity

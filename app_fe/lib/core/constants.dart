@@ -13,5 +13,5 @@ class AppColors {
 
 class AppConstants {
   static const String appName = 'Medic Booking';
-  static const String baseUrl = 'http://localhost:8080'; // Using ADB Reverse
+  static const String baseUrl = 'https://medibook.dpdns.org'; // Using Cloudflare Tunnel
 }

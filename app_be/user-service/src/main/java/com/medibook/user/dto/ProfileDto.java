@@ -15,6 +15,8 @@ public class ProfileDto {
     private UUID id;
     private UUID userId;
     private String fullName;
+    private String email;
+    private Boolean emailVerified;
     private String phone;
     private String avatarUrl;
     private String address;

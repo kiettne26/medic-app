@@ -1,4 +1,4 @@
-import 'package:dio/dio.dart';
+﻿import 'package:dio/dio.dart';
 import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:app_fe/core/network/dio_provider.dart';
@@ -39,6 +39,44 @@ class ProfileApi {
     }
   }
 
+
+  Future<EmailVerificationRequestResult?> requestEmailVerification(
+    String userId,
+    String email,
+  ) async {
+    try {
+      final response = await _dio.post(
+        '/api/profiles/user/$userId/email-verification/request',
+        data: {'email': email},
+      );
+      final data = response.data['data'];
+      if (data is Map<String, dynamic>) {
+        return EmailVerificationRequestResult.fromJson(data);
+      }
+      return const EmailVerificationRequestResult();
+    } catch (e) {
+      print('Error requesting email verification: $e');
+      return null;
+    }
+  }
+
+  Future<ProfileDto?> confirmEmailVerification(
+    String userId,
+    String code,
+  ) async {
+    try {
+      final response = await _dio.post(
+        '/api/profiles/user/$userId/email-verification/confirm',
+        data: {'code': code},
+      );
+      final data = response.data['data'];
+      if (data == null) return null;
+      return ProfileDto.fromJson(data);
+    } catch (e) {
+      print('Error confirming email verification: $e');
+      return null;
+    }
+  }
   Future<String?> uploadAvatar(File file) async {
     try {
       String fileName = file.path.split('/').last;

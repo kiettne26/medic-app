@@ -53,10 +53,7 @@ public class Doctor {
 
     @Column(name = "is_available")
     @Builder.Default
-    private Boolean isAvailable = true;
-
-    @Column(name = "consultation_fee")
-    private Double consultationFee; // Phí tư vấn
+    private Boolean isAvailable = false;
 
     @ManyToMany
     @JoinTable(name = "doctor_services", joinColumns = @JoinColumn(name = "doctor_id"), inverseJoinColumns = @JoinColumn(name = "service_id"))

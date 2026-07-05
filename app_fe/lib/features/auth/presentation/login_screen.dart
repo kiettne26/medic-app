@@ -3,6 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:app_fe/config/router.dart';
 import 'auth_controller.dart';
+import 'package:app_fe/features/home/presentation/home_controller.dart';
+import 'package:app_fe/features/notification/presentation/notification_provider.dart';
+import 'package:app_fe/features/booking/presentation/booking_list_controller.dart';
+import 'package:app_fe/features/chatbot/presentation/chatbot_provider.dart';
+import '../../profile/presentation/user_provider.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -29,7 +34,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       final authState = ref.read(authControllerProvider);
 
       if (authState.status == AuthState.success) {
-        if (mounted) context.goNamed(AppRoute.home.name);
+        if (mounted) {
+          ref.invalidate(userProvider);
+          ref.invalidate(homeControllerProvider);
+          ref.invalidate(notificationProvider);
+          ref.invalidate(bookingListControllerProvider);
+          ref.invalidate(chatbotProvider);
+          context.goNamed(AppRoute.home.name);
+        }
       } else if (authState.status == AuthState.error) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -62,20 +74,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               child: Row(
                 children: [
-                  GestureDetector(
-                    onTap: () {
-                      if (context.canPop()) context.pop();
-                    },
-                    child: const SizedBox(
-                      width: 48,
-                      height: 48,
-                      child: Icon(
-                        Icons.arrow_back_ios,
-                        size: 20,
-                        color: Color(0xFF0C131D),
-                      ),
-                    ),
-                  ),
+                  const SizedBox(width: 48, height: 48),
                   const Expanded(
                     child: Padding(
                       padding: EdgeInsets.only(right: 48), // Balance spacing
@@ -108,16 +107,24 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       const SizedBox(height: 20),
                       Center(
                         child: Container(
-                          width: 80,
-                          height: 80,
+                          width: 96,
+                          height: 96,
                           decoration: BoxDecoration(
-                            color: const Color(0xFF297EFF).withOpacity(0.1),
                             borderRadius: BorderRadius.circular(24),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.05),
+                                blurRadius: 10,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
                           ),
-                          child: const Icon(
-                            Icons.medical_services,
-                            size: 48,
-                            color: Color(0xFF297EFF), // primary
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(24),
+                            child: Image.asset(
+                              'assets/images/logo.png',
+                              fit: BoxFit.cover,
+                            ),
                           ),
                         ),
                       ),
@@ -337,8 +344,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                     authControllerProvider,
                                   );
                                   if (authState.status == AuthState.success) {
-                                    if (mounted)
+                                    if (mounted) {
+                                      ref.invalidate(userProvider);
+                                      ref.invalidate(homeControllerProvider);
+                                      ref.invalidate(notificationProvider);
+                                      ref.invalidate(
+                                        bookingListControllerProvider,
+                                      );
+                                      ref.invalidate(chatbotProvider);
                                       context.goNamed(AppRoute.home.name);
+                                    }
                                   } else if (authState.status ==
                                       AuthState.error) {
                                     if (mounted) {
@@ -415,58 +430,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                       ),
                                     ),
                                   ],
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: SizedBox(
-                              height: 48,
-                              child: OutlinedButton(
-                                onPressed: () async {
-                                  await ref
-                                      .read(authControllerProvider.notifier)
-                                      .socialLogin('facebook');
-
-                                  // Check state and navigate
-                                  final authState = ref.read(
-                                    authControllerProvider,
-                                  );
-                                  if (authState.status == AuthState.success) {
-                                    if (mounted)
-                                      context.goNamed(AppRoute.home.name);
-                                  } else if (authState.status ==
-                                      AuthState.error) {
-                                    if (mounted) {
-                                      ScaffoldMessenger.of(
-                                        context,
-                                      ).showSnackBar(
-                                        SnackBar(
-                                          content: Text(
-                                            authState.errorMessage ??
-                                                'Social Login Failed',
-                                          ),
-                                          backgroundColor: Colors.red,
-                                        ),
-                                      );
-                                    }
-                                  }
-                                },
-                                style: OutlinedButton.styleFrom(
-                                  backgroundColor: Colors.white,
-                                  side: const BorderSide(
-                                    color: Color(0xFFCDD8EA),
-                                  ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                ),
-                                child: const Icon(
-                                  Icons
-                                      .facebook, // Fallback for social_leaderboard/facebook
-                                  color: Color(0xFF1877F2),
-                                  size: 24,
                                 ),
                               ),
                             ),

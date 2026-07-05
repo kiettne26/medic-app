@@ -87,4 +87,14 @@ public class DoctorController {
         doctorService.deleteDoctor(id);
         return ResponseEntity.ok(ApiResponse.success("Xóa thành công", null));
     }
+
+    @PutMapping("/user/{userId}/online-status")
+    @Operation(summary = "Cập nhật trạng thái online/offline của bác sĩ")
+    public ResponseEntity<ApiResponse<Void>> updateOnlineStatus(
+            @PathVariable UUID userId,
+            @RequestParam boolean isOnline) {
+        doctorService.updateOnlineStatusByUserId(userId, isOnline);
+        return ResponseEntity.ok(ApiResponse.success(
+                isOnline ? "Bác sĩ đã online" : "Bác sĩ đã offline", null));
+    }
 }

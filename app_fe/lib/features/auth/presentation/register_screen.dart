@@ -3,6 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:app_fe/config/router.dart';
 import 'auth_controller.dart';
+import 'package:app_fe/features/home/presentation/home_controller.dart';
+import 'package:app_fe/features/notification/presentation/notification_provider.dart';
+import 'package:app_fe/features/booking/presentation/booking_list_controller.dart';
+import 'package:app_fe/features/chatbot/presentation/chatbot_provider.dart';
+import '../../profile/presentation/user_provider.dart';
 
 class RegisterScreen extends ConsumerStatefulWidget {
   const RegisterScreen({super.key});
@@ -15,9 +20,13 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _phoneController = TextEditingController();
+  final _addressController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
+  
+  String _selectedGender = 'Nam';
+  DateTime? _selectedDate;
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
 
@@ -26,6 +35,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     _nameController.dispose();
     _emailController.dispose();
     _phoneController.dispose();
+    _addressController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     super.dispose();
@@ -33,30 +43,46 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
   void _onRegister() async {
     if (_formKey.currentState!.validate()) {
+      if (_selectedDate == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Vui lòng chọn ngày sinh'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
       final name = _nameController.text;
       final email = _emailController.text;
       final phone = _phoneController.text;
+      final address = _addressController.text;
+      final gender = _selectedGender;
+      // Format YYYY-MM-DD
+      final dob = "${_selectedDate!.year.toString().padLeft(4, '0')}-${_selectedDate!.month.toString().padLeft(2, '0')}-${_selectedDate!.day.toString().padLeft(2, '0')}";
       final password = _passwordController.text;
 
       await ref
           .read(authControllerProvider.notifier)
-          .register(name, email, phone, password);
+          .register(
+            name: name,
+            email: email,
+            phone: phone,
+            password: password,
+            address: address,
+            gender: gender,
+            dob: dob,
+          );
 
       final authState = ref.read(authControllerProvider);
       if (authState.status == AuthState.success) {
-        if (mounted) context.goNamed(AppRoute.home.name);
-      } else if (authState.status == AuthState.registerSuccess) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text(
-                'Đăng ký thành công! Vui lòng đăng nhập.',
-                style: TextStyle(color: Colors.white),
-              ),
-              backgroundColor: Colors.green,
-            ),
-          );
-          context.goNamed(AppRoute.login.name);
+          ref.invalidate(userProvider);
+          ref.invalidate(homeControllerProvider);
+          ref.invalidate(notificationProvider);
+          ref.invalidate(bookingListControllerProvider);
+          ref.invalidate(chatbotProvider);
+          context.goNamed(AppRoute.home.name);
         }
       } else if (authState.status == AuthState.error) {
         if (mounted) {
@@ -191,6 +217,23 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     icon: Icons.call,
                     hint: 'Nhập số điện thoại',
                     keyboardType: TextInputType.phone,
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Date of birth
+                  _buildDatePicker(),
+                  const SizedBox(height: 20),
+
+                  // Gender
+                  _buildGenderSelection(),
+                  const SizedBox(height: 20),
+
+                  // Address
+                  _buildInputField(
+                    label: 'Địa chỉ',
+                    controller: _addressController,
+                    icon: Icons.home,
+                    hint: 'Nhập địa chỉ của bạn',
                   ),
                   const SizedBox(height: 20),
 
@@ -413,6 +456,131 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   return 'Vui lòng nhập thông tin';
                 return null;
               },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildGenderSelection() {
+    final genders = ['Nam', 'Nữ', 'Khác'];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Giới tính',
+          style: TextStyle(
+            color: Color(0xFF0C131D),
+            fontSize: 16,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Row(
+          children: genders.map((gender) {
+            final isSelected = _selectedGender == gender;
+            return Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                child: ChoiceChip(
+                  label: Center(
+                    child: Text(
+                      gender,
+                      style: TextStyle(
+                        color: isSelected ? Colors.white : const Color(0xFF456AA1),
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  selected: isSelected,
+                  selectedColor: const Color(0xFF297EFF),
+                  backgroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    side: BorderSide(
+                      color: isSelected ? const Color(0xFF297EFF) : const Color(0xFFCDD8EA),
+                    ),
+                  ),
+                  onSelected: (selected) {
+                    if (selected) {
+                      setState(() {
+                        _selectedGender = gender;
+                      });
+                    }
+                  },
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDatePicker() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Ngày sinh',
+          style: TextStyle(
+            color: Color(0xFF0C131D),
+            fontSize: 16,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        const SizedBox(height: 8),
+        InkWell(
+          onTap: () async {
+            final now = DateTime.now();
+            final DateTime? picked = await showDatePicker(
+              context: context,
+              initialDate: _selectedDate ?? DateTime(2000, 1, 1),
+              firstDate: DateTime(1900),
+              lastDate: now,
+              builder: (context, child) {
+                return Theme(
+                  data: Theme.of(context).copyWith(
+                    colorScheme: const ColorScheme.light(
+                      primary: Color(0xFF297EFF),
+                      onPrimary: Colors.white,
+                      onSurface: Color(0xFF0C131D),
+                    ),
+                  ),
+                  child: child!,
+                );
+              },
+            );
+            if (picked != null && picked != _selectedDate) {
+              setState(() {
+                _selectedDate = picked;
+              });
+            }
+          },
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFFCDD8EA)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.calendar_today, color: Colors.grey),
+                const SizedBox(width: 12),
+                Text(
+                  _selectedDate == null
+                      ? 'Chọn ngày sinh'
+                      : "${_selectedDate!.day.toString().padLeft(2, '0')}/${_selectedDate!.month.toString().padLeft(2, '0')}/${_selectedDate!.year}",
+                  style: TextStyle(
+                    color: _selectedDate == null
+                        ? const Color(0xFF456AA1)
+                        : const Color(0xFF0C131D),
+                    fontSize: 16,
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       ],
     );

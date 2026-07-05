@@ -5,10 +5,14 @@ spring:
   application:
     name: user-service
   datasource:
-    url: "jdbc:postgresql://${SUPABASE_HOST:aws-1-ap-southeast-1.pooler.supabase.com}:${SUPABASE_PORT:6543}/postgres?stringtype=unspecified&prepareThreshold=0"
-    username: ${SUPABASE_USER:postgres.dslbtevbqmxlmulqxcqk}
-    password: ${SUPABASE_PASSWORD:chukiet2609}
+    url: "jdbc:postgresql://${SUPABASE_HOST:db.sejuqjvdztgrrvclyevp.supabase.co}:${SUPABASE_PORT:5432}/postgres?stringtype=unspecified&prepareThreshold=0"
+    username: ${SUPABASE_USER:postgres}
+    password: ${SUPABASE_PASSWORD:Chukiet26##}
     driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 1
+      connection-timeout: 30000
   jpa:
     hibernate:
       ddl-auto: update
@@ -32,6 +36,14 @@ springdoc:
     path: /swagger-ui.html
 
 supabase:
-  url: https://dslbtevbqmxlmulqxcqk.supabase.co
-  key: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRzbGJ0ZXZicW14bG11bHF4Y3FrIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2Nzg1MjM0MSwiZXhwIjoyMDgzNDI4MzQxfQ.O1NcAHNCEf5JwzhGlFC-YsbEjPOwztrQCu_gByQHPCc
+  url: https://sejuqjvdztgrrvclyevp.supabase.co
+  key: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNlanVxanZkenRncnJ2Y2x5ZXZwIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3ODU5NTE1MywiZXhwIjoyMDk0MTcxMTUzfQ.fybub1lLQ9T4CKQ9m8JLg-GmLUPLI4rw0dqSsKG0LZg
   bucket: avatars
+
+gemini:
+  api:
+    key: ${GEMINI_API_KEY:}
+
+services:
+  notification-service:
+    url: ${NOTIFICATION_SERVICE_URL:http://localhost:8084}

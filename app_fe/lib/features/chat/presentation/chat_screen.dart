@@ -55,10 +55,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
   final List<Map<String, dynamic>> _messages = [];
   String? _conversationId;
+  
+  DoctorDto? _doctor;
+  bool _isLoadingDoctor = false;
 
   @override
   void initState() {
     super.initState();
+    _doctor = widget.doctor;
     _initializeChat();
     // Scroll to bottom
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -68,6 +72,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
   Future<void> _initializeChat() async {
     await _loadUserId();
+    await _fetchDoctorDetailsIfNeeded();
     await _loadChatHistory();
     _connectWebSocket();
   }
@@ -82,12 +87,68 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     print('Loaded user ID: $_userId');
   }
 
+  Future<void> _fetchDoctorDetailsIfNeeded() async {
+    if (_doctor == null || _doctor!.fullName == null || _doctor!.fullName!.isEmpty) {
+      if (mounted) {
+        setState(() {
+          _isLoadingDoctor = true;
+        });
+      }
+      try {
+        String? identifier;
+        String endpoint;
+        
+        if (_doctor?.userId != null && _doctor!.userId!.isNotEmpty) {
+          identifier = _doctor!.userId;
+          endpoint = 'https://medibook.dpdns.org/api/doctors/user/$identifier';
+        } else if (_doctor?.id != null && _doctor!.id.isNotEmpty) {
+          identifier = _doctor!.id;
+          endpoint = 'https://medibook.dpdns.org/api/doctors/$identifier';
+        } else {
+          return;
+        }
+
+        print('Fetching doctor details in ChatScreen from: $endpoint');
+        final response = await http.get(
+          Uri.parse(endpoint),
+          headers: {'Accept': 'application/json'},
+        );
+        if (response.statusCode == 200) {
+          final body = json.decode(response.body);
+          if (body['success'] == true && body['data'] != null) {
+            final fetchedDoctor = DoctorDto.fromJson(body['data']);
+            if (mounted) {
+              setState(() {
+                _doctor = fetchedDoctor;
+              });
+            }
+            print('Successfully loaded doctor details in ChatScreen: ${_doctor?.fullName}');
+          }
+        }
+      } catch (e) {
+        print('Error fetching doctor details in ChatScreen: $e');
+      } finally {
+        if (mounted) {
+          setState(() {
+            _isLoadingDoctor = false;
+          });
+        }
+      }
+    }
+  }
+
   Future<void> _loadChatHistory() async {
     if (_userId == null) return;
 
+    final docUserId = _doctor?.userId ?? widget.doctor.userId;
+    if (docUserId == null || docUserId.isEmpty) {
+      print('Warning: Doctor userId is null, cannot load chat history');
+      return;
+    }
+
     try {
       final url = Uri.parse(
-        'http://localhost:8080/api/chat/conversation?userId=$_userId&doctorId=${widget.doctor.userId}',
+        'https://medibook.dpdns.org/api/chat/conversation?userId=$_userId&doctorId=$docUserId',
       );
       final response = await http.get(url);
 
@@ -121,7 +182,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
   void _connectWebSocket() {
     // URL logic: Use localhost with ADB reverse tunnel
-    final socketUrl = 'ws://localhost:8080/ws';
+    final socketUrl = 'wss://medibook.dpdns.org/ws';
 
     if (mounted) {
       setState(() {
@@ -131,7 +192,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
     client = StompClient(
       config: StompConfig.sockJS(
-        url: 'http://localhost:8080/ws', // Use HTTP for SockJS fallback
+        url: 'https://medibook.dpdns.org/ws', // Use HTTP for SockJS fallback
         onConnect: onConnect,
         beforeConnect: () async {
           print('waiting to connect...');
@@ -226,7 +287,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       final message = {
         'content': text,
         'senderId': _userId,
-        'receiverId': widget.doctor.userId,
+        'receiverId': _doctor?.userId ?? widget.doctor.userId,
         'type': 'TEXT',
       };
       try {
@@ -256,7 +317,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       }
 
       // Upload ảnh lên server
-      final imageUrl = await _uploadImage(File(image.path));
+      final imageUrl = await _uploadImage(image);
 
       if (imageUrl != null) {
         _sendImageMessage(imageUrl);
@@ -278,13 +339,18 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   }
 
   /// Upload ảnh lên server và trả về URL
-  Future<String?> _uploadImage(File imageFile) async {
+  Future<String?> _uploadImage(XFile imageFile) async {
     try {
-      final uri = Uri.parse('http://localhost:8080/users/upload');
+      final uri = Uri.parse('https://medibook.dpdns.org/api/users/upload');
       final request = http.MultipartRequest('POST', uri);
 
+      final bytes = await imageFile.readAsBytes();
       request.files.add(
-        await http.MultipartFile.fromPath('file', imageFile.path),
+        http.MultipartFile.fromBytes(
+          'file',
+          bytes,
+          filename: imageFile.name,
+        ),
       );
 
       final streamedResponse = await request.send();
@@ -325,7 +391,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       final message = {
         'content': '',
         'senderId': _userId,
-        'receiverId': widget.doctor.userId,
+        'receiverId': _doctor?.userId ?? widget.doctor.userId,
         'type': 'IMAGE',
         'imageUrl': imageUrl,
       };
@@ -449,9 +515,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   border: Border.all(color: Colors.grey[100]!),
                 ),
                 child: ClipOval(
-                  child: widget.doctor.avatarUrl != null
+                  child: (_doctor?.avatarUrl != null && _doctor!.avatarUrl!.isNotEmpty)
                       ? CachedNetworkImage(
-                          imageUrl: widget.doctor.avatarUrl!,
+                          imageUrl: _doctor!.avatarUrl!,
                           fit: BoxFit.cover,
                           placeholder: (context, url) =>
                               const Icon(Icons.person, color: Colors.grey),
@@ -484,7 +550,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  widget.doctor.fullName ?? 'Bác sĩ',
+                  _doctor?.fullName ?? 'Bác sĩ',
                   style: GoogleFonts.manrope(
                     color: const Color(0xFF101418),
                     fontSize: 16,
@@ -507,29 +573,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               ],
             ),
           ),
-          Row(
-            children: [
-              _buildHeaderActionButton(Icons.videocam_outlined),
-              const SizedBox(width: 4),
-              _buildHeaderActionButton(Icons.call_outlined),
-            ],
-          ),
         ],
       ),
     );
   }
 
-  Widget _buildHeaderActionButton(IconData icon) {
-    return Container(
-      width: 40,
-      height: 40,
-      decoration: const BoxDecoration(
-        shape: BoxShape.circle,
-        color: Colors.transparent,
-      ),
-      child: Icon(icon, color: const Color(0xFF101418), size: 24),
-    );
-  }
+
 
   Widget _buildTextMessage(Map<String, dynamic> msg) {
     final isMe = msg['isMe'] as bool;
@@ -548,9 +597,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               margin: const EdgeInsets.only(right: 8),
               decoration: const BoxDecoration(shape: BoxShape.circle),
               child: ClipOval(
-                child: widget.doctor.avatarUrl != null
+                child: (_doctor?.avatarUrl != null && _doctor!.avatarUrl!.isNotEmpty)
                     ? CachedNetworkImage(
-                        imageUrl: widget.doctor.avatarUrl!,
+                        imageUrl: _doctor!.avatarUrl!,
                         fit: BoxFit.cover,
                       )
                     : const Icon(Icons.person, color: Colors.grey),
@@ -652,9 +701,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               margin: const EdgeInsets.only(right: 8),
               decoration: const BoxDecoration(shape: BoxShape.circle),
               child: ClipOval(
-                child: widget.doctor.avatarUrl != null
+                child: (_doctor?.avatarUrl != null && _doctor!.avatarUrl!.isNotEmpty)
                     ? CachedNetworkImage(
-                        imageUrl: widget.doctor.avatarUrl!,
+                        imageUrl: _doctor!.avatarUrl!,
                         fit: BoxFit.cover,
                       )
                     : const Icon(Icons.person, color: Colors.grey),
@@ -782,9 +831,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             margin: const EdgeInsets.only(right: 8),
             decoration: const BoxDecoration(shape: BoxShape.circle),
             child: ClipOval(
-              child: widget.doctor.avatarUrl != null
+              child: (_doctor?.avatarUrl != null && _doctor!.avatarUrl!.isNotEmpty)
                   ? CachedNetworkImage(
-                      imageUrl: widget.doctor.avatarUrl!,
+                      imageUrl: _doctor!.avatarUrl!,
                       fit: BoxFit.cover,
                     )
                   : const Icon(Icons.person, color: Colors.grey),

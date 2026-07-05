@@ -19,5 +19,6 @@ public class SocialLoginRequest {
     private String avatar;
     @NotBlank(message = "Provider không được để trống")
     private String provider; // "google" or "facebook"
+    @NotBlank(message = "Token khong duoc de trong")
     private String token; // ID Token (Google) or Access Token (Facebook)
 }

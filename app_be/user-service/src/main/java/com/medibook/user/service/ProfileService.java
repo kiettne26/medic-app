@@ -1,23 +1,30 @@
 package com.medibook.user.service;
 
+import com.medibook.user.dto.EmailVerificationRequestResult;
 import com.medibook.user.dto.ProfileDto;
 import com.medibook.user.dto.UpdateProfileRequest;
 import com.medibook.user.entity.Doctor;
 import com.medibook.user.entity.Profile;
 import com.medibook.user.repository.DoctorRepository;
 import com.medibook.user.repository.ProfileRepository;
+import com.medibook.common.exception.BadRequestException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.security.SecureRandom;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 /**
  * Profile Service - Quản lý hồ sơ người dùng
@@ -29,13 +36,33 @@ public class ProfileService {
 
     private final ProfileRepository profileRepository;
     private final DoctorRepository doctorRepository;
+    private static final int EMAIL_VERIFICATION_EXPIRES_IN_MINUTES = 10;
+
+    private final JdbcTemplate jdbcTemplate;
+    private final NotificationClient notificationClient;
+    private final ConcurrentMap<UUID, EmailVerificationCode> emailVerificationCodes = new ConcurrentHashMap<>();
+    private final SecureRandom secureRandom = new SecureRandom();
 
     /**
      * Lấy profile theo user ID
      */
     public Optional<ProfileDto> getProfileByUserId(UUID userId) {
-        return profileRepository.findByUserId(userId)
+        Optional<ProfileDto> profile = profileRepository.findByUserId(userId)
                 .map(this::toDto);
+        if (profile.isPresent()) {
+            return profile;
+        }
+
+        UserContact userContact = getUserContact(userId);
+        if (userContact.email() == null) {
+            return Optional.empty();
+        }
+
+        return Optional.of(ProfileDto.builder()
+                .userId(userId)
+                .email(userContact.email())
+                .emailVerified(userContact.emailVerified())
+                .build());
     }
 
     /**
@@ -53,6 +80,10 @@ public class ProfileService {
         } else {
             log.info("Profile not found for userId: {}. Creates NEW one.", userId);
             profile = Profile.builder().userId(userId).build();
+        }
+
+        if (request.getEmail() != null) {
+            updateUserEmailIfNeeded(userId, request.getEmail());
         }
 
         // Check Unique Phone
@@ -109,6 +140,58 @@ public class ProfileService {
         return toDto(profile);
     }
 
+    public EmailVerificationRequestResult requestEmailVerification(UUID userId, String email) {
+        String normalizedEmail = normalizeEmail(email);
+        if (normalizedEmail == null) {
+            throw new BadRequestException("Invalid email address.");
+        }
+
+        updateUserEmailIfNeeded(userId, normalizedEmail);
+
+        String code = String.format("%06d", secureRandom.nextInt(1_000_000));
+        emailVerificationCodes.put(userId,
+                new EmailVerificationCode(normalizedEmail, code,
+                        LocalDateTime.now().plusMinutes(EMAIL_VERIFICATION_EXPIRES_IN_MINUTES)));
+
+        boolean sent = notificationClient.sendEmailVerificationCode(
+                normalizedEmail,
+                code,
+                EMAIL_VERIFICATION_EXPIRES_IN_MINUTES);
+        if (!sent) {
+            emailVerificationCodes.remove(userId);
+            throw new BadRequestException("Could not send email verification code.");
+        }
+
+        log.info("Email verification code requested for user {} <{}>", userId, normalizedEmail);
+        return EmailVerificationRequestResult.builder()
+                .expiresInSeconds(EMAIL_VERIFICATION_EXPIRES_IN_MINUTES * 60)
+                .build();
+    }
+
+    public ProfileDto confirmEmailVerification(UUID userId, String code) {
+        EmailVerificationCode verification = emailVerificationCodes.get(userId);
+        if (verification == null) {
+            throw new BadRequestException("Verification code is missing or expired.");
+        }
+        if (verification.expiresAt().isBefore(LocalDateTime.now())) {
+            emailVerificationCodes.remove(userId);
+            throw new BadRequestException("Verification code expired.");
+        }
+        if (code == null || !verification.code().equals(code.trim())) {
+            throw new BadRequestException("Verification code is incorrect.");
+        }
+
+        jdbcTemplate.update(
+                "UPDATE users SET email = ?, email_verified = true, updated_at = now() WHERE id = ?",
+                verification.email(), userId);
+        emailVerificationCodes.remove(userId);
+
+        return getProfileByUserId(userId).orElseGet(() -> ProfileDto.builder()
+                .userId(userId)
+                .email(verification.email())
+                .emailVerified(true)
+                .build());
+    }
     /**
      * Convert entity to DTO with error handling
      */
@@ -121,10 +204,14 @@ public class ProfileService {
                 specialty = doctorOpt.get().getSpecialty();
             }
 
+            UserContact userContact = getUserContact(profile.getUserId());
+
             return ProfileDto.builder()
                     .id(profile.getId())
                     .userId(profile.getUserId())
                     .fullName(profile.getFullName())
+                    .email(userContact.email())
+                    .emailVerified(userContact.emailVerified())
                     .phone(profile.getPhone())
                     .avatarUrl(profile.getAvatarUrl())
                     .address(profile.getAddress())
@@ -143,6 +230,61 @@ public class ProfileService {
         }
     }
 
+    private void updateUserEmailIfNeeded(UUID userId, String email) {
+        String normalizedEmail = normalizeEmail(email);
+        if (normalizedEmail == null) {
+            throw new BadRequestException("Invalid email address.");
+        }
+
+        UserContact current = getUserContact(userId);
+        if (normalizedEmail.equalsIgnoreCase(current.email())) {
+            return;
+        }
+
+        Integer existing = jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM users WHERE lower(email) = lower(?) AND id <> ?",
+                Integer.class,
+                normalizedEmail,
+                userId);
+        if (existing != null && existing > 0) {
+            throw new BadRequestException("Email already exists.");
+        }
+
+        int updated = jdbcTemplate.update(
+                "UPDATE users SET email = ?, email_verified = false, updated_at = now() WHERE id = ?",
+                normalizedEmail,
+                userId);
+        if (updated == 0) {
+            throw new BadRequestException("User account was not found.");
+        }
+        emailVerificationCodes.remove(userId);
+    }
+
+    private String normalizeEmail(String email) {
+        if (email == null) {
+            return null;
+        }
+        String normalized = email.trim().toLowerCase();
+        return normalized.matches("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$") ? normalized : null;
+    }
+
+    private UserContact getUserContact(UUID userId) {
+        try {
+            return jdbcTemplate.queryForObject(
+                    "SELECT email, COALESCE(email_verified, false) AS email_verified FROM users WHERE id = ?",
+                    (rs, rowNum) -> new UserContact(rs.getString("email"), rs.getBoolean("email_verified")),
+                    userId);
+        } catch (Exception e) {
+            log.warn("Could not fetch user contact for {}: {}", userId, e.getMessage());
+            return new UserContact(null, false);
+        }
+    }
+
+    private record UserContact(String email, Boolean emailVerified) {
+    }
+
+    private record EmailVerificationCode(String email, String code, LocalDateTime expiresAt) {
+    }
     /**
      * Đồng bộ thông tin từ Profile sang Doctor (nếu user là bác sĩ)
      */

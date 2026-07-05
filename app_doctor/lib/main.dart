@@ -4,6 +4,7 @@ import 'package:app_doctor/config/router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'core/lifecycle/doctor_lifecycle_observer.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -19,22 +20,25 @@ class DoctorApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(routerProvider);
 
-    return MaterialApp.router(
-      debugShowCheckedModeBanner: false,
-      title: 'MediBook Doctor Portal',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
-        useMaterial3: true,
-        textTheme: GoogleFonts.interTextTheme(),
+    return DoctorLifecycleObserver(
+      child: MaterialApp.router(
+        debugShowCheckedModeBanner: false,
+        title: 'MediBook Doctor Portal',
+        theme: ThemeData(
+          colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
+          useMaterial3: true,
+          textTheme: GoogleFonts.interTextTheme(),
+        ),
+        localizationsDelegates: const [
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: const [Locale('vi', 'VN'), Locale('en', 'US')],
+        locale: const Locale('vi', 'VN'),
+        routerConfig: router,
       ),
-      localizationsDelegates: const [
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      supportedLocales: const [Locale('vi', 'VN'), Locale('en', 'US')],
-      locale: const Locale('vi', 'VN'),
-      routerConfig: router,
     );
   }
 }
+

@@ -1,11 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../data/dto/service_dto.dart';
 import 'booking_controller.dart';
 import 'booking_list_controller.dart';
 import '../../home/presentation/home_controller.dart';
+import '../../profile/data/dto/profile_dto.dart';
+import '../../profile/data/source/profile_api.dart';
+import '../../profile/presentation/user_provider.dart';
+import 'widgets/doctor_avatar.dart';
 
 class BookingConfirmationScreen extends ConsumerStatefulWidget {
   final List<ServiceDto> selectedServices;
@@ -37,6 +42,76 @@ class BookingConfirmationScreen extends ConsumerStatefulWidget {
 class _BookingConfirmationScreenState
     extends ConsumerState<BookingConfirmationScreen> {
   final TextEditingController _notesController = TextEditingController();
+  final FlutterSecureStorage _storage = const FlutterSecureStorage();
+  ProfileDto? _patientProfile;
+  bool _isLoadingProfile = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPatientProfile();
+  }
+
+  Future<void> _loadPatientProfile() async {
+    final userId = await _storage.read(key: 'user_id');
+    print(
+      'BookingConfirmationScreen: --- _loadPatientProfile start: userId=$userId ---',
+    );
+
+    if (userId == null) {
+      if (mounted) setState(() => _isLoadingProfile = false);
+      return;
+    }
+
+    final profile = await ref
+        .read(profileApiProvider)
+        .getProfileByUserId(userId);
+
+    print(
+      'BookingConfirmationScreen: Profile fetched: fullName="${profile?.fullName}", phone="${profile?.phone}", email="${profile?.email}", emailVerified=${profile?.emailVerified}',
+    );
+    if (profile != null) {
+      final canBook =
+          (profile.fullName?.trim().isNotEmpty ?? false) &&
+          (profile.phone?.trim().isNotEmpty ?? false) &&
+          (profile.email?.trim().isNotEmpty ?? false) &&
+          profile.emailVerified;
+      print('BookingConfirmationScreen: canBook calculation result: $canBook');
+    }
+
+    if (mounted) {
+      setState(() {
+        _patientProfile = profile;
+        _isLoadingProfile = false;
+      });
+    }
+  }
+
+  bool get _canBook {
+    final profile = _patientProfile;
+    if (profile == null) return false;
+    return (profile.fullName?.trim().isNotEmpty ?? false) &&
+        (profile.phone?.trim().isNotEmpty ?? false) &&
+        (profile.email?.trim().isNotEmpty ?? false) &&
+        profile.emailVerified;
+  }
+
+  String get _profileIssueText {
+    final profile = _patientProfile;
+    if (profile == null)
+      return 'Vui lòng xác thực thông tin trước khi đặt lịch.';
+    if (!(profile.fullName?.trim().isNotEmpty ?? false) ||
+        !(profile.phone?.trim().isNotEmpty ?? false)) {
+      return 'Vui lòng xác thực thông tin trước khi đặt lịch.';
+    }
+    if (!(profile.email?.trim().isNotEmpty ?? false)) {
+      return 'Vui lòng xác thực thông tin trước khi đặt lịch.';
+    }
+    if (!profile.emailVerified) {
+      return 'Vui lòng xác thực thông tin trước khi đặt lịch.';
+    }
+    return '';
+  }
 
   @override
   void dispose() {
@@ -46,6 +121,10 @@ class _BookingConfirmationScreenState
 
   @override
   Widget build(BuildContext context) {
+    ref.listen(userProvider, (previous, next) {
+      _loadPatientProfile();
+    });
+
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7F8),
       body: SafeArea(
@@ -62,7 +141,9 @@ class _BookingConfirmationScreenState
                     _buildDoctorInfo(),
                     _buildDateTimeInfo(),
                     _buildServicesInfo(),
+                    _buildProfileVerificationNotice(),
                     _buildNotesInput(),
+                    _buildRequiredPaymentNotice(),
                     _buildPaymentInfo(),
                     _buildNotice(),
                   ],
@@ -228,26 +309,12 @@ class _BookingConfirmationScreenState
       ),
       child: Row(
         children: [
-          Container(
-            width: 60,
-            height: 60,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(12),
-              color: const Color(0xFF297EFF).withOpacity(0.1),
-              image:
-                  widget.doctorAvatarUrl != null &&
-                      widget.doctorAvatarUrl!.isNotEmpty
-                  ? DecorationImage(
-                      image: NetworkImage(widget.doctorAvatarUrl!),
-                      fit: BoxFit.cover,
-                    )
-                  : null,
-            ),
-            child:
-                widget.doctorAvatarUrl == null ||
-                    widget.doctorAvatarUrl!.isEmpty
-                ? const Icon(Icons.person, size: 32, color: Color(0xFF297EFF))
-                : null,
+          DoctorAvatar(
+            imageUrl: widget.doctorAvatarUrl,
+            size: 60,
+            radius: 12,
+            backgroundColor: const Color(0xFF297EFF).withOpacity(0.1),
+            iconColor: const Color(0xFF297EFF),
           ),
           const SizedBox(width: 16),
           Expanded(
@@ -464,6 +531,87 @@ class _BookingConfirmationScreenState
               fontSize: 14,
               fontWeight: FontWeight.bold,
               color: Color(0xFF297EFF),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProfileVerificationNotice() {
+    if (_isLoadingProfile) {
+      return const Padding(
+        padding: EdgeInsets.all(16),
+        child: LinearProgressIndicator(),
+      );
+    }
+    if (_canBook) {
+      return Container(
+        margin: const EdgeInsets.symmetric(horizontal: 16),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: const Color(0xFF00C853).withOpacity(0.08),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: const Color(0xFF00C853).withOpacity(0.25)),
+        ),
+        child: const Row(
+          children: [
+            Icon(Icons.verified_user, color: Color(0xFF00C853)),
+            SizedBox(width: 10),
+            Expanded(child: Text('Thông tin đặt lịch đã được xác thực.')),
+          ],
+        ),
+      );
+    }
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.orange.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.orange.withOpacity(0.35)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.warning_amber_rounded, color: Colors.orange),
+          const SizedBox(width: 10),
+          Expanded(child: Text(_profileIssueText)),
+          TextButton(
+            onPressed: () async {
+              await context.push('/edit-profile');
+              _loadPatientProfile();
+            },
+            child: const Text('Cập nhật'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRequiredPaymentNotice() {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF7E6),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFFFC46B)),
+      ),
+      child: const Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.timer_outlined, color: Color(0xFFE68A00)),
+          SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              'Xin lỗi vì sự bất tiện. Để tránh tình trạng khung giờ khám bị bỏ trống, hệ thống sẽ giữ chỗ trong 15 phút sau khi đặt lịch. Vui lòng thanh toán phí dịch vụ trong thời gian này; nếu quá hạn, lịch sẽ tự động hủy và khung giờ được mở lại.',
+              style: TextStyle(
+                fontSize: 13,
+                color: Color(0xFF7A4A00),
+                height: 1.45,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
         ],
@@ -706,7 +854,10 @@ class _BookingConfirmationScreenState
             width: double.infinity,
             height: 56,
             child: ElevatedButton(
-              onPressed: ref.watch(bookingControllerProvider).isLoading
+              onPressed:
+                  ref.watch(bookingControllerProvider).isLoading ||
+                      _isLoadingProfile ||
+                      !_canBook
                   ? null
                   : _confirmBooking,
               style: ElevatedButton.styleFrom(
@@ -734,7 +885,7 @@ class _BookingConfirmationScreenState
                         Icon(Icons.check_circle, size: 24),
                         SizedBox(width: 8),
                         Text(
-                          'Xác nhận đặt lịch',
+                          'Đặt lịch và thanh toán',
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
@@ -750,6 +901,16 @@ class _BookingConfirmationScreenState
   }
 
   Future<void> _confirmBooking() async {
+    if (!_canBook) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(_profileIssueText),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
     // Lấy ghi chú từ text field
     final notes = _notesController.text.trim().isNotEmpty
         ? _notesController.text.trim()
@@ -773,106 +934,95 @@ class _BookingConfirmationScreenState
       ref.invalidate(bookingListControllerProvider);
       ref.invalidate(homeControllerProvider);
 
-      // Show success dialog
-      _showSuccessDialog();
+      final booking = ref.read(bookingControllerProvider).successData;
+      if (booking == null) {
+        context.go('/booking');
+        return;
+      }
+
+      context.go(
+        '/booking-payment',
+        extra: {'booking': booking, 'totalPrice': widget.totalPrice},
+      );
     } else if (mounted) {
+      final errorMsg =
+          ref.read(bookingControllerProvider).error ?? "Lỗi không xác định";
+      final isFriendlyError =
+          !errorMsg.contains('Lỗi hệ thống') && !errorMsg.contains('Exception');
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            'Đặt lịch thất bại: ${ref.read(bookingControllerProvider).error ?? "Lỗi không xác định"}',
+          elevation: 0,
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: Colors.transparent,
+          margin: const EdgeInsets.all(16),
+          content: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFF2F2), // Light soft red background
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: const Color(0xFFFFD1D1),
+              ), // Soft red border
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.06),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFFFE3E3),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.error_outline_rounded,
+                    color: Color(0xFFD32F2F),
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        isFriendlyError
+                            ? 'Lịch khám đã được đặt'
+                            : 'Đặt lịch thất bại',
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF8C1D1D),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        isFriendlyError
+                            ? errorMsg
+                            : 'Đã xảy ra lỗi hệ thống. Vui lòng thử lại sau.',
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: Color(0xFFB71C1C),
+                          height: 1.3,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
-          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 4),
         ),
       );
     }
-  }
-
-  void _showSuccessDialog() {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 80,
-                height: 80,
-                decoration: BoxDecoration(
-                  color: const Color(0xFF00C853).withOpacity(0.1),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.check_circle,
-                  color: Color(0xFF00C853),
-                  size: 48,
-                ),
-              ),
-              const SizedBox(height: 24),
-              const Text(
-                'Đặt lịch thành công!',
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF101418),
-                ),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                'Lịch hẹn của bạn đã được xác nhận vào ${widget.selectedTime} ngày ${DateFormat('dd/MM/yyyy').format(widget.selectedDate)}',
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 14,
-                  color: Color(0xFF5E718D),
-                  height: 1.5,
-                ),
-              ),
-              const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                height: 52,
-                child: ElevatedButton(
-                  onPressed: () {
-                    // Close dialog and go back to home
-                    Navigator.of(context).pop();
-                    context.go('/home');
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF297EFF),
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  child: const Text(
-                    'Về trang chủ',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextButton(
-                onPressed: () {
-                  Navigator.of(context).pop();
-                  context.go('/booking');
-                },
-                child: const Text(
-                  'Xem lịch hẹn của tôi',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF297EFF),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
   }
 
   String _formatPrice(double price) {

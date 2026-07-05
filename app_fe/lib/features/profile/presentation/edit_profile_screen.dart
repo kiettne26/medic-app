@@ -20,6 +20,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   final _formKey = GlobalKey<FormState>();
 
   final _fullNameController = TextEditingController();
+  final _emailController = TextEditingController();
   final _phoneController = TextEditingController();
   final _addressController = TextEditingController();
   final _dobController = TextEditingController();
@@ -29,6 +30,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   String? _selectedGender;
   bool _isLoading = true;
   bool _isSaving = false;
+  bool _emailVerified = false;
 
   final List<Map<String, String>> _genderOptions = [
     {'value': 'MALE', 'label': 'Nam'},
@@ -45,6 +47,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   @override
   void dispose() {
     _fullNameController.dispose();
+    _emailController.dispose();
     _phoneController.dispose();
     _addressController.dispose();
     _dobController.dispose();
@@ -65,11 +68,24 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     // Load từ storage trước
     final fullName = await _storage.read(key: 'user_name');
     final avatarUrl = await _storage.read(key: 'user_avatar');
+    final email = await _storage.read(key: 'user_email');
+    final emailVerified = await _storage.read(key: 'email_verified');
+    final phone = await _storage.read(key: 'user_phone');
+    final address = await _storage.read(key: 'user_address');
+    final dob = await _storage.read(key: 'user_dob');
+    final gender = await _storage.read(key: 'user_gender');
 
     if (mounted) {
       setState(() {
         _fullNameController.text = fullName ?? '';
+        _emailController.text = email ?? '';
+        _emailVerified = emailVerified == 'true';
+        _phoneController.text = phone ?? '';
+        _addressController.text = address ?? '';
+        _dobController.text = dob ?? '';
+        _selectedGender = gender;
         _avatarUrl = avatarUrl;
+        _isLoading = false;
       });
     }
 
@@ -80,16 +96,93 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     if (mounted && profile != null) {
       setState(() {
         _fullNameController.text = profile.fullName ?? _fullNameController.text;
-        _phoneController.text = profile.phone ?? '';
-        _addressController.text = profile.address ?? '';
-        _dobController.text = profile.dob ?? '';
-        _selectedGender = profile.gender;
+        _emailController.text = profile.email ?? _emailController.text;
+        _emailVerified = profile.emailVerified;
+        _phoneController.text = profile.phone ?? _phoneController.text;
+        _addressController.text = profile.address ?? _addressController.text;
+        _dobController.text = profile.dob ?? _dobController.text;
+        _selectedGender = profile.gender ?? _selectedGender;
         _avatarUrl = profile.avatarUrl ?? _avatarUrl;
         _isLoading = false;
       });
     } else if (mounted) {
       setState(() => _isLoading = false);
     }
+  }
+
+  bool _isValidEmail(String value) {
+    return RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(value.trim());
+  }
+
+  Future<void> _openEmailVerification() async {
+    if (_userId == null) return;
+    final email = _emailController.text.trim();
+    if (!_isValidEmail(email)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Vui lòng nhập email hợp lệ')),
+      );
+      return;
+    }
+
+    final profile = await context.push<ProfileDto>(
+      '/email-verification',
+      extra: {'userId': _userId!, 'email': email},
+    );
+
+    if (!mounted || profile == null) return;
+
+    setState(() {
+      _emailController.text = profile.email ?? email;
+      _emailVerified = profile.emailVerified;
+    });
+
+    await _writeProfileToStorage(profile, fallbackEmail: email);
+    await ref.read(userProvider.notifier).refreshProfile();
+  }
+
+  Future<void> _writeProfileToStorage(
+    ProfileDto profile, {
+    String? fallbackFullName,
+    String? fallbackEmail,
+    String? fallbackPhone,
+    String? fallbackAddress,
+    String? fallbackDob,
+    String? fallbackGender,
+    String? fallbackAvatarUrl,
+  }) async {
+    final fullName = profile.fullName ?? fallbackFullName;
+    final email = profile.email ?? fallbackEmail;
+    final phone = profile.phone ?? fallbackPhone;
+    final address = profile.address ?? fallbackAddress;
+    final dob = profile.dob ?? fallbackDob;
+    final gender = profile.gender ?? fallbackGender;
+    final avatarUrl = profile.avatarUrl ?? fallbackAvatarUrl;
+
+    if (fullName != null) {
+      await _storage.write(key: 'user_name', value: fullName);
+    }
+    if (email != null) {
+      await _storage.write(key: 'user_email', value: email);
+    }
+    if (phone != null) {
+      await _storage.write(key: 'user_phone', value: phone);
+    }
+    if (address != null) {
+      await _storage.write(key: 'user_address', value: address);
+    }
+    if (dob != null) {
+      await _storage.write(key: 'user_dob', value: dob);
+    }
+    if (gender != null) {
+      await _storage.write(key: 'user_gender', value: gender);
+    }
+    if (avatarUrl != null) {
+      await _storage.write(key: 'user_avatar', value: avatarUrl);
+    }
+    await _storage.write(
+      key: 'email_verified',
+      value: profile.emailVerified.toString(),
+    );
   }
 
   Future<void> _saveProfile() async {
@@ -99,6 +192,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
 
     final request = UpdateProfileRequest(
       fullName: _fullNameController.text.trim(),
+      email: _emailController.text.trim(),
       phone: _phoneController.text.trim(),
       address: _addressController.text.trim(),
       gender: _selectedGender,
@@ -115,14 +209,20 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
       setState(() => _isSaving = false);
 
       if (result != null) {
-        // Cập nhật storage
-        await _storage.write(key: 'user_name', value: result.fullName);
-        if (result.avatarUrl != null) {
-          await _storage.write(key: 'user_avatar', value: result.avatarUrl);
-        }
+        await _writeProfileToStorage(
+          result,
+          fallbackFullName: request.fullName,
+          fallbackEmail: request.email,
+          fallbackPhone: request.phone,
+          fallbackAddress: request.address,
+          fallbackDob: request.dob,
+          fallbackGender: request.gender,
+          fallbackAvatarUrl: request.avatarUrl,
+        );
 
         // Refresh global user state
         ref.read(userProvider.notifier).refreshProfile();
+        if (!mounted) return;
 
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -300,6 +400,35 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
           ),
           const SizedBox(height: 20),
           _buildTextField(
+            label: 'Email',
+            controller: _emailController,
+            keyboardType: TextInputType.emailAddress,
+            suffixIcon: _emailVerified
+                ? const Icon(Icons.verified, color: Color(0xFF00C853))
+                : TextButton(
+                    onPressed: _openEmailVerification,
+                    child: const Text('Xác thực'),
+                  ),
+            onChanged: (_) {
+              if (_emailVerified) {
+                setState(() => _emailVerified = false);
+              }
+            },
+            validator: (value) {
+              if (value == null || value.trim().isEmpty) {
+                return 'Vui lòng nhập email';
+              }
+              if (!_isValidEmail(value)) {
+                return 'Email không hợp lệ';
+              }
+              if (!_emailVerified) {
+                return 'Vui lòng xác thực email';
+              }
+              return null;
+            },
+          ),
+          const SizedBox(height: 20),
+          _buildTextField(
             label: 'Số điện thoại',
             controller: _phoneController,
             keyboardType: TextInputType.phone,
@@ -394,6 +523,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     bool readOnly = false,
     VoidCallback? onTap,
     Widget? suffixIcon,
+    ValueChanged<String>? onChanged,
     int maxLines = 1,
   }) {
     return Column(
@@ -416,6 +546,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
           validator: validator,
           readOnly: readOnly,
           onTap: onTap,
+          onChanged: onChanged,
           maxLines: maxLines,
           style: const TextStyle(
             fontSize: 16,
@@ -538,7 +669,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
             if (url.startsWith('http')) {
               _avatarUrl = url;
             } else {
-              _avatarUrl = "http://localhost:8080$url";
+              _avatarUrl = "https://medibook.dpdns.org$url";
             }
           } else {
             ScaffoldMessenger.of(context).showSnackBar(

@@ -2,12 +2,14 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../data/auth_repository.dart';
+import '../../../core/network/dio_provider.dart';
 
 class AuthController extends StateNotifier<AsyncValue<void>> {
   final AuthRepository _repository;
+  final Dio _dio;
   final _storage = const FlutterSecureStorage();
 
-  AuthController(this._repository) : super(const AsyncValue.data(null));
+  AuthController(this._repository, this._dio) : super(const AsyncValue.data(null));
 
   Future<bool> login(String email, String password) async {
     state = const AsyncValue.loading();
@@ -20,6 +22,9 @@ class AuthController extends StateNotifier<AsyncValue<void>> {
       if (response.user != null) {
         await _storage.write(key: 'user_id', value: response.user!.id);
         await _storage.write(key: 'user_role', value: response.user!.role);
+
+        // Cập nhật trạng thái online cho bác sĩ
+        _updateOnlineStatus(response.user!.id, true);
       }
 
       state = const AsyncValue.data(null);
@@ -43,18 +48,44 @@ class AuthController extends StateNotifier<AsyncValue<void>> {
   }
 
   Future<void> logout() async {
+    // Cập nhật trạng thái offline trước khi đăng xuất
+    final userId = await _storage.read(key: 'user_id');
+    if (userId != null) {
+      await _updateOnlineStatus(userId, false);
+    }
     await _storage.deleteAll();
     state = const AsyncValue.data(null);
   }
 
   Future<bool> checkAuth() async {
     final token = await _storage.read(key: 'access_token');
+    if (token != null) {
+      // Khi app mở lại và đã đăng nhập → đặt online
+      final userId = await _storage.read(key: 'user_id');
+      if (userId != null) {
+        _updateOnlineStatus(userId, true);
+      }
+    }
     return token != null;
+  }
+
+  /// Gọi API cập nhật trạng thái online/offline của bác sĩ
+  Future<void> _updateOnlineStatus(String userId, bool isOnline) async {
+    try {
+      await _dio.put(
+        '/api/doctors/user/$userId/online-status',
+        queryParameters: {'isOnline': isOnline},
+      );
+    } catch (e) {
+      // Không throw lỗi - đây là tính năng phụ, không ảnh hưởng login/logout
+      print('Warning: Could not update online status: $e');
+    }
   }
 }
 
 final authControllerProvider =
     StateNotifierProvider<AuthController, AsyncValue<void>>((ref) {
       final repository = ref.watch(authRepositoryProvider);
-      return AuthController(repository);
+      final dio = ref.watch(dioProvider);
+      return AuthController(repository, dio);
     });

@@ -70,6 +70,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     await _loadDoctorId();
     await _loadChatHistory();
     _connectWebSocket();
+    _markAsRead();
   }
 
   Future<void> _loadDoctorId() async {
@@ -83,6 +84,21 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     print('Loaded Doctor ID: $_doctorId');
   }
 
+  Future<void> _markAsRead() async {
+    final docUserId = _doctorId ?? await _storage.read(key: 'user_id');
+    final convId = _conversationId ?? widget.conversation.id;
+    if (docUserId == null || convId.isEmpty) return;
+    try {
+      final url = Uri.parse(
+        'https://medibook.dpdns.org/api/chat/conversation/$convId/read?readerId=$docUserId',
+      );
+      await http.post(url);
+      print('Marked messages as read for conversation: $convId');
+    } catch (e) {
+      print('Error marking messages as read in ChatScreen: $e');
+    }
+  }
+
   Future<void> _loadChatHistory() async {
     if (_doctorId == null) return;
 
@@ -92,7 +108,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       // For now using the same endpoint but swapping params if needed or relying on backend handling.
       // Actually backend likely expects 'userId' (patient) and 'doctorId'.
       final url = Uri.parse(
-        'http://localhost:8080/api/chat/conversation?userId=${widget.conversation.patientId}&doctorId=$_doctorId',
+        'https://medibook.dpdns.org/api/chat/conversation?userId=${widget.conversation.patientId}&doctorId=$_doctorId',
       );
       final response = await http.get(url);
 
@@ -125,7 +141,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   }
 
   void _connectWebSocket() {
-    final socketUrl = 'ws://localhost:8080/ws';
+    final socketUrl = 'wss://medibook.dpdns.org/ws';
 
     if (mounted) {
       setState(() {
@@ -135,7 +151,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
     client = StompClient(
       config: StompConfig.sockJS(
-        url: 'http://localhost:8080/ws',
+        url: 'https://medibook.dpdns.org/ws',
         onConnect: onConnect,
         beforeConnect: () async {
           print('waiting to connect...');
@@ -201,6 +217,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             });
           });
           _scrollToBottom();
+          _markAsRead(); // Auto mark as read on new message receipt
         }
       },
     );
@@ -259,7 +276,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       }
 
       // Upload ảnh lên server
-      final imageUrl = await _uploadImage(File(image.path));
+      final imageUrl = await _uploadImage(image);
 
       if (imageUrl != null) {
         _sendImageMessage(imageUrl);
@@ -281,13 +298,18 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   }
 
   /// Upload ảnh lên server và trả về URL
-  Future<String?> _uploadImage(File imageFile) async {
+  Future<String?> _uploadImage(XFile imageFile) async {
     try {
-      final uri = Uri.parse('http://localhost:8080/users/upload');
+      final uri = Uri.parse('https://medibook.dpdns.org/api/users/upload');
       final request = http.MultipartRequest('POST', uri);
 
+      final bytes = await imageFile.readAsBytes();
       request.files.add(
-        await http.MultipartFile.fromPath('file', imageFile.path),
+        http.MultipartFile.fromBytes(
+          'file',
+          bytes,
+          filename: imageFile.name,
+        ),
       );
 
       final streamedResponse = await request.send();

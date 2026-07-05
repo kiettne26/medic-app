@@ -196,4 +196,9 @@ public class ChatService {
                                         .build();
                 }).collect(java.util.stream.Collectors.toList());
         }
+
+        @Transactional
+        public void markMessagesAsRead(UUID conversationId, UUID readerId) {
+                messageRepository.markAsRead(conversationId, readerId);
+        }
 }

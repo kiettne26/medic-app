@@ -76,4 +76,17 @@ public class AuthController {
         authService.changePassword(userId, request);
         return ResponseEntity.ok(ApiResponse.success("Đổi mật khẩu thành công", null));
     }
+
+    /**
+     * ADMIN: Tạo tài khoản bác sĩ mới (User + Doctor profile)
+     */
+    @PostMapping("/admin/create-doctor")
+    @Operation(summary = "Admin tạo tài khoản bác sĩ mới")
+    public ResponseEntity<ApiResponse<CreateDoctorAccountResponse>> createDoctorAccount(
+            @Valid @RequestBody CreateDoctorAccountRequest request) {
+        CreateDoctorAccountResponse response = authService.createDoctorAccount(request);
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(ApiResponse.success("Tạo tài khoản bác sĩ thành công", response));
+    }
 }

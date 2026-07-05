@@ -1,21 +1,25 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../core/theme/theme_controller.dart';
 
-class SettingsScreen extends StatefulWidget {
+class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
 
   @override
-  State<SettingsScreen> createState() => _SettingsScreenState();
+  ConsumerState<SettingsScreen> createState() => _SettingsScreenState();
 }
 
-class _SettingsScreenState extends State<SettingsScreen> {
+class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   bool _notificationsEnabled = true;
-  bool _darkModeEnabled = false;
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDarkMode = ref.watch(themeControllerProvider) == ThemeMode.dark;
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7F8),
+      backgroundColor: theme.scaffoldBackgroundColor,
       body: SafeArea(
         child: Column(
           children: [
@@ -45,12 +49,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     _buildToggleItem(
                       icon: Icons.dark_mode_outlined,
                       title: 'Chế độ tối',
-                      value: _darkModeEnabled,
+                      value: isDarkMode,
                       onChanged: (value) {
-                        setState(() {
-                          _darkModeEnabled = value;
-                        });
-                        // TODO: Implement dark mode switching
+                        ref
+                            .read(themeControllerProvider.notifier)
+                            .setDarkMode(value);
                       },
                     ),
                     const SizedBox(height: 4),
@@ -66,22 +69,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ),
                     const SizedBox(height: 4),
 
-                    // Security & Privacy
-                    _buildNavigationItem(
-                      icon: Icons.security,
-                      title: 'Bảo mật & Quyền riêng tư',
-                      onTap: () {
-                        // TODO: Navigate to security screen
-                      },
-                    ),
-                    const SizedBox(height: 4),
-
                     // Terms of Use
                     _buildNavigationItem(
                       icon: Icons.description_outlined,
                       title: 'Điều khoản sử dụng',
                       onTap: () {
-                        // TODO: Navigate to terms screen
+                        context.push('/terms-of-use');
                       },
                     ),
                     const SizedBox(height: 4),
@@ -91,7 +84,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       icon: Icons.info_outline,
                       title: 'Về ứng dụng',
                       onTap: () {
-                        // TODO: Navigate to about screen
+                        context.push('/about-app');
                       },
                     ),
 
@@ -100,7 +93,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     // Version
                     Text(
                       'Phiên bản 1.2.0',
-                      style: TextStyle(color: Colors.grey[400], fontSize: 12),
+                      style: TextStyle(
+                        color: theme.colorScheme.onSurfaceVariant,
+                        fontSize: 12,
+                      ),
                     ),
                   ],
                 ),
@@ -113,32 +109,36 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Widget _buildHeader() {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.8),
-        border: Border(bottom: BorderSide(color: Colors.grey.withOpacity(0.1))),
+        color: colorScheme.surface.withOpacity(0.92),
+        border: Border(
+          bottom: BorderSide(color: colorScheme.outline.withOpacity(0.14)),
+        ),
       ),
       child: Row(
         children: [
           GestureDetector(
             onTap: () => context.pop(),
-            child: const SizedBox(
+            child: SizedBox(
               width: 48,
               height: 48,
               child: Icon(
                 Icons.arrow_back_ios,
                 size: 20,
-                color: Color(0xFF101418),
+                color: colorScheme.onSurface,
               ),
             ),
           ),
-          const Expanded(
+          Expanded(
             child: Text(
               'Cài đặt',
               textAlign: TextAlign.center,
               style: TextStyle(
-                color: Color(0xFF101418),
+                color: colorScheme.onSurface,
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
               ),
@@ -156,13 +156,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
     required bool value,
     required ValueChanged<bool> onChanged,
   }) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: colorScheme.surface,
         borderRadius: BorderRadius.circular(12),
         border: Border(
-          bottom: BorderSide(color: Colors.grey.withOpacity(0.05)),
+          bottom: BorderSide(color: colorScheme.outline.withOpacity(0.08)),
         ),
       ),
       child: Row(
@@ -180,8 +182,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
           Expanded(
             child: Text(
               title,
-              style: const TextStyle(
-                color: Color(0xFF101418),
+              style: TextStyle(
+                color: colorScheme.onSurface,
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
               ),
@@ -192,8 +194,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
             onChanged: onChanged,
             activeColor: const Color(0xFF297EFF),
             activeTrackColor: const Color(0xFF297EFF).withOpacity(0.3),
-            inactiveThumbColor: Colors.white,
-            inactiveTrackColor: Colors.grey[300],
+            inactiveThumbColor: colorScheme.surface,
+            inactiveTrackColor: colorScheme.outline.withOpacity(0.25),
           ),
         ],
       ),
@@ -206,12 +208,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
     String? subtitle,
     required VoidCallback onTap,
   }) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: colorScheme.surface,
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
@@ -229,8 +233,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
             Expanded(
               child: Text(
                 title,
-                style: const TextStyle(
-                  color: Color(0xFF101418),
+                style: TextStyle(
+                  color: colorScheme.onSurface,
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
                 ),
@@ -239,11 +243,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
             if (subtitle != null) ...[
               Text(
                 subtitle,
-                style: TextStyle(color: Colors.grey[500], fontSize: 14),
+                style: TextStyle(
+                  color: colorScheme.onSurfaceVariant,
+                  fontSize: 14,
+                ),
               ),
               const SizedBox(width: 8),
             ],
-            Icon(Icons.chevron_right, color: Colors.grey[400], size: 20),
+            Icon(
+              Icons.chevron_right,
+              color: colorScheme.onSurfaceVariant,
+              size: 20,
+            ),
           ],
         ),
       ),

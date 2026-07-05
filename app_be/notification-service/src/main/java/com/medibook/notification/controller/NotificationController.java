@@ -2,6 +2,9 @@ package com.medibook.notification.controller;
 
 import com.medibook.common.dto.ApiResponse;
 import com.medibook.common.dto.PageResponse;
+import com.medibook.notification.dto.BookingCreatedEmailRequest;
+import com.medibook.notification.dto.BookingStatusNotificationRequest;
+import com.medibook.notification.dto.EmailVerificationEmailRequest;
 import com.medibook.notification.entity.Notification;
 import com.medibook.notification.service.NotificationService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -26,6 +29,38 @@ import java.util.UUID;
 public class NotificationController {
 
     private final NotificationService notificationService;
+
+    @PostMapping("/internal/booking-created")
+    @Operation(summary = "Gửi email xác nhận khi đặt lịch thành công")
+    public ResponseEntity<ApiResponse<Void>> sendBookingCreatedConfirmation(
+            @RequestBody BookingCreatedEmailRequest request) {
+        notificationService.sendBookingCreatedConfirmation(request);
+        return ResponseEntity.ok(ApiResponse.success("Đã gửi yêu cầu email xác nhận đặt lịch", null));
+    }
+
+    @PostMapping("/internal/booking-confirmed")
+    @Operation(summary = "Tạo thông báo khi lịch hẹn được xác nhận")
+    public ResponseEntity<ApiResponse<Void>> sendBookingConfirmedNotification(
+            @RequestBody BookingStatusNotificationRequest request) {
+        notificationService.sendBookingConfirmedNotification(request);
+        return ResponseEntity.ok(ApiResponse.success("Đã tạo thông báo xác nhận lịch hẹn", null));
+    }
+
+    @PostMapping("/internal/booking-cancelled")
+    @Operation(summary = "Tạo thông báo khi lịch hẹn bị hủy")
+    public ResponseEntity<ApiResponse<Void>> sendBookingCancelledNotification(
+            @RequestBody BookingStatusNotificationRequest request) {
+        notificationService.sendBookingCancelledNotification(request);
+        return ResponseEntity.ok(ApiResponse.success("Đã tạo thông báo hủy lịch hẹn", null));
+    }
+
+    @PostMapping("/internal/email-verification")
+    @Operation(summary = "Gửi email chứa mã xác thực email")
+    public ResponseEntity<ApiResponse<Void>> sendEmailVerificationCode(
+            @RequestBody EmailVerificationEmailRequest request) {
+        notificationService.sendEmailVerificationCode(request);
+        return ResponseEntity.ok(ApiResponse.success("Verification email sent", null));
+    }
 
     @GetMapping
     @Operation(summary = "Lấy danh sách thông báo của user")

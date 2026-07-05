@@ -31,7 +31,6 @@ mixin _$DoctorDto {
   double? get rating => throw _privateConstructorUsedError;
   int? get totalReviews => throw _privateConstructorUsedError;
   bool get isAvailable => throw _privateConstructorUsedError;
-  double? get consultationFee => throw _privateConstructorUsedError;
   List<MedicalServiceDto>? get services => throw _privateConstructorUsedError;
 
   /// Serializes this DoctorDto to a JSON map.
@@ -60,7 +59,6 @@ abstract class $DoctorDtoCopyWith<$Res> {
     double? rating,
     int? totalReviews,
     bool isAvailable,
-    double? consultationFee,
     List<MedicalServiceDto>? services,
   });
 }
@@ -90,7 +88,6 @@ class _$DoctorDtoCopyWithImpl<$Res, $Val extends DoctorDto>
     Object? rating = freezed,
     Object? totalReviews = freezed,
     Object? isAvailable = null,
-    Object? consultationFee = freezed,
     Object? services = freezed,
   }) {
     return _then(
@@ -135,10 +132,6 @@ class _$DoctorDtoCopyWithImpl<$Res, $Val extends DoctorDto>
                 ? _value.isAvailable
                 : isAvailable // ignore: cast_nullable_to_non_nullable
                       as bool,
-            consultationFee: freezed == consultationFee
-                ? _value.consultationFee
-                : consultationFee // ignore: cast_nullable_to_non_nullable
-                      as double?,
             services: freezed == services
                 ? _value.services
                 : services // ignore: cast_nullable_to_non_nullable
@@ -169,7 +162,6 @@ abstract class _$$DoctorDtoImplCopyWith<$Res>
     double? rating,
     int? totalReviews,
     bool isAvailable,
-    double? consultationFee,
     List<MedicalServiceDto>? services,
   });
 }
@@ -198,7 +190,6 @@ class __$$DoctorDtoImplCopyWithImpl<$Res>
     Object? rating = freezed,
     Object? totalReviews = freezed,
     Object? isAvailable = null,
-    Object? consultationFee = freezed,
     Object? services = freezed,
   }) {
     return _then(
@@ -243,10 +234,6 @@ class __$$DoctorDtoImplCopyWithImpl<$Res>
             ? _value.isAvailable
             : isAvailable // ignore: cast_nullable_to_non_nullable
                   as bool,
-        consultationFee: freezed == consultationFee
-            ? _value.consultationFee
-            : consultationFee // ignore: cast_nullable_to_non_nullable
-                  as double?,
         services: freezed == services
             ? _value._services
             : services // ignore: cast_nullable_to_non_nullable
@@ -270,7 +257,6 @@ class _$DoctorDtoImpl implements _DoctorDto {
     required this.rating,
     required this.totalReviews,
     this.isAvailable = true,
-    required this.consultationFee,
     required final List<MedicalServiceDto>? services,
   }) : _services = services;
 
@@ -298,8 +284,6 @@ class _$DoctorDtoImpl implements _DoctorDto {
   @override
   @JsonKey()
   final bool isAvailable;
-  @override
-  final double? consultationFee;
   final List<MedicalServiceDto>? _services;
   @override
   List<MedicalServiceDto>? get services {
@@ -312,7 +296,7 @@ class _$DoctorDtoImpl implements _DoctorDto {
 
   @override
   String toString() {
-    return 'DoctorDto(id: $id, userId: $userId, fullName: $fullName, specialty: $specialty, description: $description, phone: $phone, avatarUrl: $avatarUrl, rating: $rating, totalReviews: $totalReviews, isAvailable: $isAvailable, consultationFee: $consultationFee, services: $services)';
+    return 'DoctorDto(id: $id, userId: $userId, fullName: $fullName, specialty: $specialty, description: $description, phone: $phone, avatarUrl: $avatarUrl, rating: $rating, totalReviews: $totalReviews, isAvailable: $isAvailable, services: $services)';
   }
 
   @override
@@ -336,8 +320,6 @@ class _$DoctorDtoImpl implements _DoctorDto {
                 other.totalReviews == totalReviews) &&
             (identical(other.isAvailable, isAvailable) ||
                 other.isAvailable == isAvailable) &&
-            (identical(other.consultationFee, consultationFee) ||
-                other.consultationFee == consultationFee) &&
             const DeepCollectionEquality().equals(other._services, _services));
   }
 
@@ -355,7 +337,6 @@ class _$DoctorDtoImpl implements _DoctorDto {
     rating,
     totalReviews,
     isAvailable,
-    consultationFee,
     const DeepCollectionEquality().hash(_services),
   );
 
@@ -385,7 +366,6 @@ abstract class _DoctorDto implements DoctorDto {
     required final double? rating,
     required final int? totalReviews,
     final bool isAvailable,
-    required final double? consultationFee,
     required final List<MedicalServiceDto>? services,
   }) = _$DoctorDtoImpl;
 
@@ -412,8 +392,6 @@ abstract class _DoctorDto implements DoctorDto {
   int? get totalReviews;
   @override
   bool get isAvailable;
-  @override
-  double? get consultationFee;
   @override
   List<MedicalServiceDto>? get services;
 

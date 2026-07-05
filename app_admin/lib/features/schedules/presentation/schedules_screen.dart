@@ -19,6 +19,8 @@ class SchedulesScreen extends ConsumerStatefulWidget {
 class _SchedulesScreenState extends ConsumerState<SchedulesScreen> {
   String _selectedTab = 'all';
   final Set<String> _selectedSlotIds = {};
+  String _doctorSearchQuery = '';
+  String? _selectedDoctorId;
   
   // Date formatter
   final _dateFormat = DateFormat('dd/MM/yyyy');
@@ -74,7 +76,7 @@ class _SchedulesScreenState extends ConsumerState<SchedulesScreen> {
             if (_selectedSlotIds.isNotEmpty) _buildBulkActions(),
             if (_selectedSlotIds.isNotEmpty) const SizedBox(height: 16),
             slotsAsync.when(
-              data: (slots) => _buildTable(slots),
+              data: (slots) => _buildMasterDetailLayout(slots),
               loading: () => const Center(
                 child: Padding(
                   padding: EdgeInsets.all(48),
@@ -110,6 +112,8 @@ class _SchedulesScreenState extends ConsumerState<SchedulesScreen> {
     setState(() {
       _selectedTab = tab;
       _selectedSlotIds.clear();
+      _selectedDoctorId = null;
+      _doctorSearchQuery = '';
     });
     
     String? status;
@@ -124,26 +128,7 @@ class _SchedulesScreenState extends ConsumerState<SchedulesScreen> {
     ref.read(timeSlotsControllerProvider.notifier).refresh(status: status);
   }
 
-  void _toggleSelection(String slotId) {
-    setState(() {
-      if (_selectedSlotIds.contains(slotId)) {
-        _selectedSlotIds.remove(slotId);
-      } else {
-        _selectedSlotIds.add(slotId);
-      }
-    });
-  }
 
-  void _toggleSelectAll(List<TimeSlotDto> slots) {
-    setState(() {
-      if (_selectedSlotIds.length == slots.length) {
-        _selectedSlotIds.clear();
-      } else {
-        _selectedSlotIds.clear();
-        _selectedSlotIds.addAll(slots.map((s) => s.id));
-      }
-    });
-  }
 
   Future<void> _approveBulk() async {
     if (_selectedSlotIds.isEmpty) return;
@@ -700,254 +685,698 @@ class _SchedulesScreenState extends ConsumerState<SchedulesScreen> {
     );
   }
 
-  Widget _buildTable(List<TimeSlotDto> slots) {
-    if (slots.isEmpty) {
-      return Container(
-        padding: const EdgeInsets.all(48),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: const Color(0xFFF3F4F6)),
-        ),
-        child: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                Icons.event_busy_outlined,
-                size: 64,
-                color: Colors.grey.shade300,
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'Không có lịch làm việc nào',
-                style: GoogleFonts.manrope(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: const Color(0xFF5F718C),
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Thử thay đổi bộ lọc hoặc chọn khoảng thời gian khác',
-                style: GoogleFonts.manrope(
-                  fontSize: 14,
-                  color: const Color(0xFF9CA3AF),
-                ),
-              ),
-            ],
+  Widget _buildMasterDetailLayout(List<TimeSlotDto> slots) {
+    // 1. Trích xuất danh sách bác sĩ độc bản từ slots
+    final doctorsMap = <String, _DoctorSummary>{};
+    for (final slot in slots) {
+      if (slot.doctorId.isNotEmpty) {
+        doctorsMap.putIfAbsent(
+          slot.doctorId,
+          () => _DoctorSummary(
+            id: slot.doctorId,
+            name: slot.doctorName ?? 'Bác sĩ',
+            avatar: slot.doctorAvatar,
           ),
-        ),
-      );
+        );
+        final doc = doctorsMap[slot.doctorId]!;
+        if (slot.status == 'PENDING') doc.pendingCount++;
+        if (slot.status == 'APPROVED') doc.approvedCount++;
+        if (slot.status == 'REJECTED') doc.rejectedCount++;
+      }
     }
 
+    // 2. Lọc theo thanh tìm kiếm tên bác sĩ
+    final filteredDoctors = doctorsMap.values.where((doc) {
+      if (_doctorSearchQuery.isEmpty) return true;
+      return doc.name.toLowerCase().contains(_doctorSearchQuery.toLowerCase());
+    }).toList();
+
+    // 3. Tự động chọn bác sĩ đầu tiên nếu chưa chọn hoặc id không còn hợp lệ
+    if (_selectedDoctorId == null && filteredDoctors.isNotEmpty) {
+      _selectedDoctorId = filteredDoctors.first.id;
+    } else if (_selectedDoctorId != null && !filteredDoctors.any((d) => d.id == _selectedDoctorId)) {
+      _selectedDoctorId = filteredDoctors.isNotEmpty ? filteredDoctors.first.id : null;
+    }
+
+    // 4. Lấy slots của bác sĩ đang chọn
+    final doctorSlots = slots.where((s) => s.doctorId == _selectedDoctorId).toList();
+
+    // 5. Nhóm các slots của bác sĩ đó theo ngày
+    final slotsByDate = <String, List<TimeSlotDto>>{};
+    for (final slot in doctorSlots) {
+      slotsByDate.putIfAbsent(slot.date, () => []).add(slot);
+    }
+    final sortedDates = slotsByDate.keys.toList()..sort((a, b) => a.compareTo(b));
+
+    if (slots.isEmpty) {
+      return _buildEmptyState();
+    }
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // MASTER PANEL - BÊN TRÁI
+        Expanded(
+          flex: 3,
+          child: _buildMasterPanel(filteredDoctors),
+        ),
+        const SizedBox(width: 24),
+        // DETAIL PANEL - BÊN PHẢI
+        Expanded(
+          flex: 7,
+          child: _buildDetailPanel(
+            filteredDoctors.firstWhere(
+              (d) => d.id == _selectedDoctorId,
+              orElse: () => _DoctorSummary(id: '', name: 'Không rõ'),
+            ),
+            doctorSlots,
+            slotsByDate,
+            sortedDates,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMasterPanel(List<_DoctorSummary> doctors) {
     return Container(
+      height: 700,
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFF3F4F6)),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE5E7EB)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.02),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(
-            width: double.infinity,
-            child: DataTable(
-              headingRowColor: WidgetStateProperty.all(const Color(0xFFF9FAFB)),
-              dataRowMinHeight: 72,
-              dataRowMaxHeight: 72,
-              columns: [
-                DataColumn(
-                  label: Checkbox(
-                    value: slots.isNotEmpty && _selectedSlotIds.length == slots.length,
-                    onChanged: (_) => _toggleSelectAll(slots),
-                    activeColor: const Color(0xFF2E80FA),
-                  ),
-                ),
-                const DataColumn(label: _TableTitle('BÁC SĨ')),
-                const DataColumn(label: _TableTitle('NGÀY')),
-                const DataColumn(label: _TableTitle('THỨ')),
-                const DataColumn(label: _TableTitle('GIỜ BẮT ĐẦU')),
-                const DataColumn(label: _TableTitle('GIỜ KẾT THÚC')),
-                const DataColumn(label: _TableTitle('TRẠNG THÁI')),
-                const DataColumn(
-                  label: _TableTitle('THAO TÁC', align: TextAlign.right),
-                  numeric: true,
-                ),
-              ],
-              rows: slots.map((slot) {
-                final isSelected = _selectedSlotIds.contains(slot.id);
-                return DataRow(
-                  selected: isSelected,
-                  cells: [
-                    DataCell(
-                      Checkbox(
-                        value: isSelected,
-                        onChanged: (_) => _toggleSelection(slot.id),
-                        activeColor: const Color(0xFF2E80FA),
-                      ),
-                    ),
-                    DataCell(_buildDoctorCell(slot)),
-                    DataCell(Text(
-                      _formatDate(slot.date),
-                      style: GoogleFonts.manrope(fontSize: 14),
-                    )),
-                    DataCell(Text(
-                      _getDayOfWeek(slot.date),
-                      style: GoogleFonts.manrope(
-                        fontSize: 13,
-                        color: const Color(0xFF5F718C),
-                      ),
-                    )),
-                    DataCell(Text(
-                      slot.startTime,
-                      style: GoogleFonts.manrope(fontSize: 14, fontWeight: FontWeight.w600),
-                    )),
-                    DataCell(Text(
-                      slot.endTime,
-                      style: GoogleFonts.manrope(fontSize: 14, fontWeight: FontWeight.w600),
-                    )),
-                    DataCell(_buildStatusBadge(slot.status)),
-                    DataCell(_buildActions(slot)),
-                  ],
-                );
-              }).toList(),
-            ),
-          ),
-          // Pagination
-          const Divider(height: 1, color: Color(0xFFF3F4F6)),
+          // Tiêu đề & Tìm kiếm bác sĩ
           Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Hiển thị ${slots.length} lịch làm việc',
+                  'Danh sách Bác sĩ (${doctors.length})',
                   style: GoogleFonts.manrope(
-                    fontSize: 12,
-                    color: const Color(0xFF5F718C),
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xFF111418),
                   ),
                 ),
-                Row(
-                  children: [
-                    IconButton(
-                      onPressed: () {},
-                      icon: const Icon(Icons.chevron_left),
+                const SizedBox(height: 12),
+                Container(
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF3F4F6),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: TextField(
+                    onChanged: (val) {
+                      setState(() {
+                        _doctorSearchQuery = val;
+                      });
+                    },
+                    decoration: InputDecoration(
+                      hintText: 'Tìm kiếm bác sĩ...',
+                      hintStyle: GoogleFonts.manrope(
+                        color: Colors.grey[500],
+                        fontSize: 13,
+                      ),
+                      prefixIcon: Icon(
+                        Icons.search,
+                        size: 18,
+                        color: Colors.grey[500],
+                      ),
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(vertical: 10),
                     ),
-                    IconButton(
-                      onPressed: () {},
-                      icon: const Icon(Icons.chevron_right),
-                    ),
-                  ],
+                  ),
                 ),
               ],
             ),
           ),
+          const Divider(height: 1, color: Color(0xFFE5E7EB)),
+          
+          // Danh sách bác sĩ cuộn
+          Expanded(
+            child: doctors.isEmpty
+                ? Center(
+                    child: Text(
+                      'Không tìm thấy bác sĩ',
+                      style: GoogleFonts.manrope(color: Colors.grey[500]),
+                    ),
+                  )
+                : ListView.separated(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    itemCount: doctors.length,
+                    separatorBuilder: (context, index) => const Divider(height: 1, color: Color(0xFFF3F4F6)),
+                    itemBuilder: (context, index) {
+                      final doc = doctors[index];
+                      final isSelected = doc.id == _selectedDoctorId;
+                      
+                      return InkWell(
+                        onTap: () {
+                          setState(() {
+                            _selectedDoctorId = doc.id;
+                          });
+                        },
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 150),
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                          decoration: BoxDecoration(
+                            color: isSelected ? const Color(0xFFEBF3FF) : Colors.transparent,
+                            border: Border(
+                              left: BorderSide(
+                                color: isSelected ? const Color(0xFF2E80FA) : Colors.transparent,
+                                width: 4,
+                              ),
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              CircleAvatar(
+                                radius: 20,
+                                backgroundImage: doc.avatar != null && doc.avatar!.isNotEmpty
+                                    ? NetworkImage(doc.avatar!)
+                                    : null,
+                                backgroundColor: const Color(0xFF2E80FA).withValues(alpha: 0.1),
+                                child: (doc.avatar == null || doc.avatar!.isEmpty)
+                                    ? Text(
+                                        doc.name.isNotEmpty ? doc.name[0] : 'D',
+                                        style: GoogleFonts.manrope(
+                                          fontWeight: FontWeight.bold,
+                                          color: const Color(0xFF2E80FA),
+                                        ),
+                                      )
+                                    : null,
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      doc.name,
+                                      style: GoogleFonts.manrope(
+                                        fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                                        fontSize: 14,
+                                        color: isSelected ? const Color(0xFF2E80FA) : const Color(0xFF111418),
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      'ID: ${doc.id.length >= 8 ? doc.id.substring(0, 8) : doc.id}',
+                                      style: GoogleFonts.manrope(
+                                        fontSize: 11,
+                                        color: Colors.grey[500],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              // Badge counts
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  if (doc.pendingCount > 0)
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFFFFBEB),
+                                        borderRadius: BorderRadius.circular(10),
+                                        border: Border.all(color: const Color(0xFFF59E0B).withValues(alpha: 0.3)),
+                                      ),
+                                      child: Text(
+                                        '${doc.pendingCount} chờ',
+                                        style: GoogleFonts.manrope(
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.bold,
+                                          color: const Color(0xFFD97706),
+                                        ),
+                                      ),
+                                    ),
+                                  if (doc.pendingCount == 0 && doc.approvedCount > 0)
+                                    Text(
+                                      '${doc.approvedCount} đã duyệt',
+                                      style: GoogleFonts.manrope(
+                                        fontSize: 10,
+                                        color: const Color(0xFF10B981),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildDoctorCell(TimeSlotDto slot) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        CircleAvatar(
-          radius: 20,
-          backgroundImage: slot.doctorAvatar != null && slot.doctorAvatar!.isNotEmpty
-              ? NetworkImage(slot.doctorAvatar!)
-              : null,
-          backgroundColor: const Color(0xFF2E80FA).withValues(alpha: 0.1),
-          child: (slot.doctorAvatar == null || slot.doctorAvatar!.isEmpty)
-              ? Text(
-                  slot.doctorName?.isNotEmpty == true ? slot.doctorName![0] : 'D',
-                  style: GoogleFonts.manrope(
-                    fontWeight: FontWeight.bold,
-                    color: const Color(0xFF2E80FA),
-                  ),
-                )
-              : null,
+  Widget _buildDetailPanel(
+    _DoctorSummary doc,
+    List<TimeSlotDto> doctorSlots,
+    Map<String, List<TimeSlotDto>> slotsByDate,
+    List<String> sortedDates,
+  ) {
+    if (doc.id.isEmpty) {
+      return Container(
+        height: 700,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFFE5E7EB)),
         ),
-        const SizedBox(width: 12),
-        Flexible(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                slot.doctorName ?? 'Bác sĩ',
-                style: GoogleFonts.manrope(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14,
-                  color: const Color(0xFF111418),
-                ),
-                overflow: TextOverflow.ellipsis,
-              ),
-              Text(
-                'ID: ${slot.doctorId.length >= 8 ? slot.doctorId.substring(0, 8) : slot.doctorId}',
-                style: GoogleFonts.manrope(
-                  fontSize: 12,
-                  color: const Color(0xFF5F718C),
-                ),
-              ),
-            ],
+        child: Center(
+          child: Text(
+            'Vui lòng chọn bác sĩ bên trái để xem chi tiết lịch',
+            style: GoogleFonts.manrope(color: Colors.grey[500]),
           ),
         ),
-      ],
-    );
-  }
-
-  Widget _buildStatusBadge(String status) {
-    Color bgColor;
-    Color textColor;
-    String label;
-    IconData icon;
-
-    switch (status) {
-      case 'APPROVED':
-        bgColor = const Color(0xFFECFDF5);
-        textColor = const Color(0xFF10B981);
-        label = 'Đã duyệt';
-        icon = Icons.check_circle_outline;
-        break;
-      case 'REJECTED':
-        bgColor = const Color(0xFFFEF2F2);
-        textColor = const Color(0xFFEF4444);
-        label = 'Từ chối';
-        icon = Icons.cancel_outlined;
-        break;
-      case 'PENDING':
-      default:
-        bgColor = const Color(0xFFFFFBEB);
-        textColor = const Color(0xFFF59E0B);
-        label = 'Chờ duyệt';
-        icon = Icons.access_time;
-        break;
+      );
     }
 
+    // Tính toán số lượng slots được chọn cho bác sĩ này
+    final selectedSlotsOfThisDoctor = doctorSlots.where((s) => _selectedSlotIds.contains(s.id)).toList();
+    final hasSelected = selectedSlotsOfThisDoctor.isNotEmpty;
+    final allSelected = selectedSlotsOfThisDoctor.isNotEmpty && selectedSlotsOfThisDoctor.length == doctorSlots.length;
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      height: 700,
       decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(8),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE5E7EB)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 14, color: textColor),
-          const SizedBox(width: 6),
-          Text(
-            label,
-            style: GoogleFonts.manrope(
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-              color: textColor,
+          // Detail Header - Thông tin bác sĩ
+          Padding(
+            padding: const EdgeInsets.all(20),
+            child: Row(
+              children: [
+                CircleAvatar(
+                  radius: 24,
+                  backgroundImage: doc.avatar != null && doc.avatar!.isNotEmpty
+                      ? NetworkImage(doc.avatar!)
+                      : null,
+                  backgroundColor: const Color(0xFF2E80FA).withValues(alpha: 0.1),
+                  child: (doc.avatar == null || doc.avatar!.isEmpty)
+                      ? Text(
+                          doc.name.isNotEmpty ? doc.name[0] : 'D',
+                          style: GoogleFonts.manrope(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: const Color(0xFF2E80FA),
+                          ),
+                        )
+                      : null,
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        doc.name,
+                        style: GoogleFonts.manrope(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: const Color(0xFF111418),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Tổng số: ${doctorSlots.length} lịch (${doc.pendingCount} chờ duyệt, ${doc.approvedCount} đã duyệt, ${doc.rejectedCount} bị từ chối)',
+                        style: GoogleFonts.manrope(
+                          fontSize: 12,
+                          color: const Color(0xFF5F718C),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                
+                // Select all / Bulk actions
+                if (doctorSlots.isNotEmpty) ...[
+                  Checkbox(
+                    value: allSelected,
+                    onChanged: (_) {
+                      setState(() {
+                        if (allSelected) {
+                          // Bỏ chọn tất cả slot của bác sĩ này
+                          for (final s in doctorSlots) {
+                            _selectedSlotIds.remove(s.id);
+                          }
+                        } else {
+                          // Chọn tất cả slot của bác sĩ này
+                          for (final s in doctorSlots) {
+                            _selectedSlotIds.add(s.id);
+                          }
+                        }
+                      });
+                    },
+                    activeColor: const Color(0xFF2E80FA),
+                  ),
+                  Text(
+                    'Chọn tất cả',
+                    style: GoogleFonts.manrope(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: const Color(0xFF5F718C),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          const Divider(height: 1, color: Color(0xFFE5E7EB)),
+          
+          // Bulk actions banner riêng cho bác sĩ này
+          if (hasSelected)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              color: const Color(0xFF2E80FA).withValues(alpha: 0.06),
+              child: Row(
+                children: [
+                  const Icon(Icons.info_outline, color: Color(0xFF2E80FA), size: 18),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Đã chọn ${selectedSlotsOfThisDoctor.length} / ${doctorSlots.length} khung giờ',
+                    style: GoogleFonts.manrope(
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                      color: const Color(0xFF2E80FA),
+                    ),
+                  ),
+                  const Spacer(),
+                  // Approve bulk for this doctor
+                  ElevatedButton.icon(
+                    onPressed: () async {
+                      final confirmed = await showDialog<bool>(
+                        context: context,
+                        builder: (ctx) => AlertDialog(
+                          title: const Text('Xác nhận duyệt'),
+                          content: Text('Bạn có chắc muốn duyệt ${selectedSlotsOfThisDoctor.length} khung giờ của bác sĩ ${doc.name}?'),
+                          actions: [
+                            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Hủy')),
+                            ElevatedButton(
+                              onPressed: () => Navigator.pop(ctx, true),
+                              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF10B981)),
+                              child: const Text('Duyệt', style: TextStyle(color: Colors.white)),
+                            )
+                          ],
+                        ),
+                      );
+                      if (confirmed == true) {
+                        await ref.read(timeSlotsControllerProvider.notifier).approveBulkSlots(selectedSlotsOfThisDoctor.map((s) => s.id).toList());
+                        setState(() {
+                          _selectedSlotIds.removeAll(selectedSlotsOfThisDoctor.map((s) => s.id));
+                        });
+                      }
+                    },
+                    icon: const Icon(Icons.check, size: 14),
+                    label: const Text('Duyệt'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF10B981),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  // Reject bulk for this doctor
+                  ElevatedButton.icon(
+                    onPressed: () async {
+                      final confirmed = await showDialog<bool>(
+                        context: context,
+                        builder: (ctx) => AlertDialog(
+                          title: const Text('Xác nhận từ chối'),
+                          content: Text('Bạn có chắc muốn từ chối ${selectedSlotsOfThisDoctor.length} khung giờ của bác sĩ ${doc.name}?'),
+                          actions: [
+                            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Hủy')),
+                            ElevatedButton(
+                              onPressed: () => Navigator.pop(ctx, true),
+                              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFEF4444)),
+                              child: const Text('Từ chối', style: TextStyle(color: Colors.white)),
+                            )
+                          ],
+                        ),
+                      );
+                      if (confirmed == true) {
+                        await ref.read(timeSlotsControllerProvider.notifier).rejectBulkSlots(selectedSlotsOfThisDoctor.map((s) => s.id).toList());
+                        setState(() {
+                          _selectedSlotIds.removeAll(selectedSlotsOfThisDoctor.map((s) => s.id));
+                        });
+                      }
+                    },
+                    icon: const Icon(Icons.close, size: 14),
+                    label: const Text('Từ chối'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFEF4444),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          
+          // Danh sách các ngày cuộn
+          Expanded(
+            child: ListView.builder(
+              padding: const EdgeInsets.all(20),
+              itemCount: sortedDates.length,
+              itemBuilder: (context, index) {
+                final date = sortedDates[index];
+                final daySlots = slotsByDate[date]!;
+                
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Ngày Header
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8, bottom: 12),
+                      child: Row(
+                        children: [
+                          Icon(Icons.calendar_month_outlined, size: 18, color: Colors.grey[600]),
+                          const SizedBox(width: 8),
+                          Text(
+                            '${_getDayOfWeek(date)} - ${_formatDate(date)}',
+                            style: GoogleFonts.manrope(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: const Color(0xFF111418),
+                            ),
+                          ),
+                          const Spacer(),
+                          // Nút duyệt nhanh các slot PENDING của ngày này
+                          if (daySlots.any((s) => s.status == 'PENDING'))
+                            TextButton.icon(
+                              onPressed: () async {
+                                final pendingIds = daySlots.where((s) => s.status == 'PENDING').map((s) => s.id).toList();
+                                await ref.read(timeSlotsControllerProvider.notifier).approveBulkSlots(pendingIds);
+                              },
+                              icon: const Icon(Icons.done_all, size: 14, color: Color(0xFF10B981)),
+                              label: Text(
+                                'Duyệt nhanh ngày này',
+                                style: GoogleFonts.manrope(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: const Color(0xFF10B981),
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                    
+                    // Grid of Time Slots
+                    GridView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 3,
+                        childAspectRatio: 2.3,
+                        crossAxisSpacing: 12,
+                        mainAxisSpacing: 12,
+                      ),
+                      itemCount: daySlots.length,
+                      itemBuilder: (context, idx) {
+                        final slot = daySlots[idx];
+                        final isSelected = _selectedSlotIds.contains(slot.id);
+                        
+                        Color bgColor;
+                        Color borderColor;
+                        Color textColor;
+                        String statusLabel;
+                        
+                        if (slot.status == 'APPROVED') {
+                          bgColor = const Color(0xFFECFDF5);
+                          borderColor = const Color(0xFFA7F3D0);
+                          textColor = const Color(0xFF047857);
+                          statusLabel = 'Đã duyệt';
+                        } else if (slot.status == 'REJECTED') {
+                          bgColor = const Color(0xFFFEF2F2);
+                          borderColor = const Color(0xFFFCA5A5);
+                          textColor = const Color(0xFFB91C1C);
+                          statusLabel = 'Từ chối';
+                        } else {
+                          bgColor = const Color(0xFFFFFBEB);
+                          borderColor = const Color(0xFFFDE68A);
+                          textColor = const Color(0xFFB45309);
+                          statusLabel = 'Chờ duyệt';
+                        }
+                        
+                        return InkWell(
+                          onTap: () {
+                            setState(() {
+                              if (isSelected) {
+                                _selectedSlotIds.remove(slot.id);
+                              } else {
+                                _selectedSlotIds.add(slot.id);
+                              }
+                            });
+                          },
+                          borderRadius: BorderRadius.circular(10),
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: bgColor,
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                color: isSelected ? const Color(0xFF2E80FA) : borderColor,
+                                width: isSelected ? 2 : 1,
+                              ),
+                              boxShadow: isSelected
+                                  ? [
+                                      BoxShadow(
+                                        color: const Color(0xFF2E80FA).withValues(alpha: 0.15),
+                                        blurRadius: 4,
+                                        offset: const Offset(0, 2),
+                                      )
+                                    ]
+                                  : null,
+                            ),
+                            child: Stack(
+                              children: [
+                                // Checkbox ở góc trên bên trái
+                                Positioned(
+                                  top: 4,
+                                  left: 4,
+                                  child: SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: Checkbox(
+                                      value: isSelected,
+                                      onChanged: (val) {
+                                        setState(() {
+                                          if (val == true) {
+                                            _selectedSlotIds.add(slot.id);
+                                          } else {
+                                            _selectedSlotIds.remove(slot.id);
+                                          }
+                                        });
+                                      },
+                                      activeColor: const Color(0xFF2E80FA),
+                                    ),
+                                  ),
+                                ),
+                                
+                                // Khung giờ ở giữa
+                                Center(
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Text(
+                                        '${slot.startTime.substring(0, 5)} - ${slot.endTime.substring(0, 5)}',
+                                        style: GoogleFonts.manrope(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.bold,
+                                          color: const Color(0xFF111418),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        statusLabel,
+                                        style: GoogleFonts.manrope(
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w600,
+                                          color: textColor,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                
+                                // Nút thao tác nhanh ở góc trên bên phải khi ở trạng thái PENDING
+                                if (slot.status == 'PENDING')
+                                  Positioned(
+                                    top: 4,
+                                    right: 4,
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        // Duyệt nhanh
+                                        InkWell(
+                                          onTap: () => _approveSlot(slot.id),
+                                          borderRadius: BorderRadius.circular(100),
+                                          child: Container(
+                                            padding: const EdgeInsets.all(2),
+                                            decoration: const BoxDecoration(
+                                              color: Color(0xFF10B981),
+                                              shape: BoxShape.circle,
+                                            ),
+                                            child: const Icon(Icons.check, size: 10, color: Colors.white),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 4),
+                                        // Từ chối nhanh
+                                        InkWell(
+                                          onTap: () => _rejectSlot(slot.id),
+                                          borderRadius: BorderRadius.circular(100),
+                                          child: Container(
+                                            padding: const EdgeInsets.all(2),
+                                            decoration: const BoxDecoration(
+                                              color: Color(0xFFEF4444),
+                                              shape: BoxShape.circle,
+                                            ),
+                                            child: const Icon(Icons.close, size: 10, color: Colors.white),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+                );
+              },
             ),
           ),
         ],
@@ -955,39 +1384,44 @@ class _SchedulesScreenState extends ConsumerState<SchedulesScreen> {
     );
   }
 
-  Widget _buildActions(TimeSlotDto slot) {
-    if (slot.status == 'PENDING') {
-      return Row(
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: [
-          IconButton(
-            icon: const Icon(Icons.check_circle_outline),
-            color: const Color(0xFF10B981),
-            tooltip: 'Duyệt',
-            onPressed: () => _approveSlot(slot.id),
-          ),
-          IconButton(
-            icon: const Icon(Icons.cancel_outlined),
-            color: const Color(0xFFEF4444),
-            tooltip: 'Từ chối',
-            onPressed: () => _rejectSlot(slot.id),
-          ),
-        ],
-      );
-    }
-    
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.end,
-      children: [
-        IconButton(
-          icon: const Icon(Icons.visibility_outlined),
-          color: const Color(0xFF5F718C),
-          tooltip: 'Xem chi tiết',
-          onPressed: () {
-            // TODO: Show detail dialog
-          },
+  Widget _buildEmptyState() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(48),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE5E7EB)),
+      ),
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.event_busy_outlined,
+              size: 64,
+              color: Colors.grey.shade300,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Không có lịch làm việc nào',
+              style: GoogleFonts.manrope(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: const Color(0xFF5F718C),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Thử thay đổi bộ lọc hoặc chọn khoảng thời gian khác',
+              style: GoogleFonts.manrope(
+                fontSize: 14,
+                color: const Color(0xFF9CA3AF),
+              ),
+            ),
+          ],
         ),
-      ],
+      ),
     );
   }
 
@@ -1121,22 +1555,20 @@ class _TabItem extends StatelessWidget {
   }
 }
 
-class _TableTitle extends StatelessWidget {
-  final String title;
-  final TextAlign align;
+class _DoctorSummary {
+  final String id;
+  final String name;
+  final String? avatar;
+  int pendingCount;
+  int approvedCount;
+  int rejectedCount;
 
-  const _TableTitle(this.title, {this.align = TextAlign.left});
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(
-      title,
-      textAlign: align,
-      style: GoogleFonts.manrope(
-        fontSize: 12,
-        fontWeight: FontWeight.bold,
-        color: const Color(0xFF5F718C),
-      ),
-    );
-  }
+  _DoctorSummary({
+    required this.id,
+    required this.name,
+    this.avatar,
+    this.pendingCount = 0,
+    this.approvedCount = 0,
+    this.rejectedCount = 0,
+  });
 }

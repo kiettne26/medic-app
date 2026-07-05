@@ -41,6 +41,8 @@ public class SecurityConfig {
                         // Public endpoints
                         .requestMatchers("/auth/register", "/auth/login", "/auth/refresh", "/auth/social-login")
                         .permitAll()
+                        // Admin endpoints (sẽ cần authentication trong production)
+                        .requestMatchers("/auth/admin/**").permitAll()
                         .requestMatchers("/swagger-ui/**", "/api-docs/**", "/v3/api-docs/**").permitAll()
                         .requestMatchers("/actuator/**").permitAll()
                         // Protected endpoints

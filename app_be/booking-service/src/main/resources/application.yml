@@ -5,10 +5,14 @@ spring:
   application:
     name: booking-service
   datasource:
-    url: "jdbc:postgresql://${SUPABASE_HOST:aws-1-ap-southeast-1.pooler.supabase.com}:${SUPABASE_PORT:6543}/postgres?stringtype=unspecified&prepareThreshold=0"
-    username: ${SUPABASE_USER:postgres.dslbtevbqmxlmulqxcqk}
-    password: ${SUPABASE_PASSWORD:chukiet2609}
+    url: "jdbc:postgresql://${SUPABASE_HOST:db.sejuqjvdztgrrvclyevp.supabase.co}:${SUPABASE_PORT:5432}/postgres?stringtype=unspecified&prepareThreshold=0"
+    username: ${SUPABASE_USER:postgres}
+    password: ${SUPABASE_PASSWORD:Chukiet26##}
     driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+      connection-timeout: 30000
   jpa:
     hibernate:
       ddl-auto: none
@@ -34,4 +38,16 @@ springdoc:
 # Internal service URLs
 services:
   notification-service:
-    url: http://notification-service
+    url: ${NOTIFICATION_SERVICE_URL:http://localhost:8084}
+
+payments:
+  zalopay:
+    mock-enabled: ${ZALOPAY_MOCK_ENABLED:true}
+    app-id: ${ZALOPAY_APP_ID:0}
+    key1: ${ZALOPAY_KEY1:}
+    key2: ${ZALOPAY_KEY2:}
+    create-endpoint: ${ZALOPAY_CREATE_ENDPOINT:https://sb-openapi.zalopay.vn/v2/create}
+    query-endpoint: ${ZALOPAY_QUERY_ENDPOINT:https://sb-openapi.zalopay.vn/v2/query}
+    callback-url: ${ZALOPAY_CALLBACK_URL:}
+    redirect-url: ${ZALOPAY_REDIRECT_URL:}
+    merchant-name: ${ZALOPAY_MERCHANT_NAME:MediBook}

@@ -14,6 +14,6 @@ public class SlotNotAvailableException extends RuntimeException {
     }
 
     public SlotNotAvailableException() {
-        super("Khung giờ này đã được đặt bởi người khác. Vui lòng chọn khung giờ khác.");
+        super("Lịch khám này đã được đặt trước. Vui lòng chọn khung giờ khác.");
     }
 }

@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../../doctor/data/dto/doctor_dto.dart';
 import '../data/source/service_api.dart';
 import '../data/dto/service_dto.dart';
+import 'widgets/doctor_avatar.dart';
 
 class SelectServiceScreen extends ConsumerStatefulWidget {
   final DoctorDto? doctor; // Made optional
@@ -234,26 +235,12 @@ class _SelectServiceScreenState extends ConsumerState<SelectServiceScreen> {
         ),
         child: Row(
           children: [
-            Container(
-              width: 64,
-              height: 64,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(12),
-                color: Colors.grey[200],
-                image:
-                    widget.doctor!.avatarUrl != null &&
-                        widget.doctor!.avatarUrl!.isNotEmpty
-                    ? DecorationImage(
-                        image: NetworkImage(widget.doctor!.avatarUrl!),
-                        fit: BoxFit.cover,
-                      )
-                    : null,
-              ),
-              child:
-                  widget.doctor!.avatarUrl == null ||
-                      widget.doctor!.avatarUrl!.isEmpty
-                  ? const Icon(Icons.person, size: 32, color: Colors.grey)
-                  : null,
+            DoctorAvatar(
+              imageUrl: widget.doctor!.avatarUrl,
+              size: 64,
+              radius: 12,
+              backgroundColor: Colors.grey.shade200,
+              iconColor: Colors.grey,
             ),
             const SizedBox(width: 16),
             Expanded(
@@ -341,28 +328,7 @@ class _SelectServiceScreenState extends ConsumerState<SelectServiceScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Service Image
-            Container(
-              width: 100,
-              height: 100,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(12),
-                color: Colors.grey[200],
-                border: Border.all(color: Colors.grey.withOpacity(0.1)),
-                image: service.imageUrl != null && service.imageUrl!.isNotEmpty
-                    ? DecorationImage(
-                        image: NetworkImage(service.imageUrl!),
-                        fit: BoxFit.cover,
-                      )
-                    : null,
-              ),
-              child: service.imageUrl == null || service.imageUrl!.isEmpty
-                  ? const Icon(
-                      Icons.medical_services_outlined,
-                      size: 40,
-                      color: Colors.grey,
-                    )
-                  : null,
-            ),
+            _buildServiceImage(service),
             const SizedBox(width: 16),
             // Info
             Expanded(
@@ -473,6 +439,97 @@ class _SelectServiceScreenState extends ConsumerState<SelectServiceScreen> {
         ),
       ),
     );
+  }
+
+  Widget _buildServiceImage(ServiceDto service) {
+    final assetPath = _resolveServiceImageAsset(service);
+    final imageUrl = assetPath == null ? service.imageUrl?.trim() : null;
+
+    return Container(
+      width: 100,
+      height: 100,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        color: Colors.grey[200],
+        border: Border.all(color: Colors.grey.withOpacity(0.1)),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: assetPath != null
+          ? Image.asset(assetPath, width: 100, height: 100, fit: BoxFit.cover)
+          : imageUrl != null && imageUrl.isNotEmpty
+          ? Image.network(
+              imageUrl,
+              width: 100,
+              height: 100,
+              fit: BoxFit.cover,
+              loadingBuilder: (context, child, loadingProgress) {
+                if (loadingProgress == null) return child;
+                return _buildServiceImagePlaceholder();
+              },
+              errorBuilder: (_, __, ___) => _buildServiceImagePlaceholder(),
+            )
+          : _buildServiceImagePlaceholder(),
+    );
+  }
+
+  Widget _buildServiceImagePlaceholder() {
+    return Container(
+      color: Colors.grey[200],
+      child: const Icon(
+        Icons.medical_services_outlined,
+        size: 40,
+        color: Colors.grey,
+      ),
+    );
+  }
+
+  String _normalizeVietnamese(String value) {
+    return value
+        .toLowerCase()
+        .replaceAll(RegExp(r'[àáạảãâầấậẩẫăằắặẳẵ]'), 'a')
+        .replaceAll(RegExp(r'[èéẹẻẽêềếệểễ]'), 'e')
+        .replaceAll(RegExp(r'[ìíịỉĩ]'), 'i')
+        .replaceAll(RegExp(r'[òóọỏõôồốộổỗơờớợởỡ]'), 'o')
+        .replaceAll(RegExp(r'[ùúụủũưừứựửữ]'), 'u')
+        .replaceAll(RegExp(r'[ỳýỵỷỹ]'), 'y')
+        .replaceAll('đ', 'd');
+  }
+
+  String? _resolveServiceImageAsset(ServiceDto service) {
+    final serviceText = _normalizeVietnamese(
+      '${service.name} ${service.category ?? ''}',
+    );
+
+    if (serviceText.contains('tim') || serviceText.contains('cardio')) {
+      return 'assets/images/service_cardiology.png';
+    }
+    if (serviceText.contains('rang') ||
+        serviceText.contains('nha khoa') ||
+        serviceText.contains('nho rang')) {
+      return 'assets/images/service_dental.png';
+    }
+    if (serviceText.contains('dinh duong')) {
+      return 'assets/images/service_nutrition.png';
+    }
+    if (serviceText.contains('nhi')) {
+      return 'assets/images/service_pediatrics.png';
+    }
+    if (serviceText.contains('da lieu')) {
+      return 'assets/images/service_dermatology.png';
+    }
+    if (serviceText.contains('xet nghiem') || serviceText.contains('mau')) {
+      return 'assets/images/service_lab.png';
+    }
+    if (serviceText.contains('truc tuyen') ||
+        serviceText.contains('online') ||
+        serviceText.contains('video')) {
+      return 'assets/images/service_video.png';
+    }
+    if (serviceText.contains('kham') || serviceText.contains('tong quat')) {
+      return 'assets/images/service_general.png';
+    }
+
+    return null;
   }
 
   Widget _buildBottomBar() {

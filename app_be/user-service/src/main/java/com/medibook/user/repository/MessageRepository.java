@@ -16,4 +16,11 @@ public interface MessageRepository extends JpaRepository<Message, UUID> {
     Optional<Message> findTopByConversationIdOrderByCreatedAtDesc(UUID conversationId);
 
     int countByConversationIdAndSenderIdNotAndIsReadFalse(UUID conversationId, UUID currentUserId);
+
+    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.data.jpa.repository.Query("UPDATE Message m SET m.isRead = true WHERE m.conversation.id = :conversationId AND m.senderId <> :readerId AND m.isRead = false")
+    void markAsRead(
+        @org.springframework.data.repository.query.Param("conversationId") UUID conversationId, 
+        @org.springframework.data.repository.query.Param("readerId") UUID readerId
+    );
 }

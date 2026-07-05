@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:app_fe/config/router.dart';
 
 class MainLayout extends StatelessWidget {
   final StatefulNavigationShell navigationShell;
@@ -9,12 +8,34 @@ class MainLayout extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final isDark = colorScheme.brightness == Brightness.dark;
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7F8),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: Stack(
         children: [
           // Content
           navigationShell,
+
+          // Chatbot floating button (Only show on Home Screen)
+          if (navigationShell.currentIndex == 0)
+            Positioned(
+              bottom: 76, // Height of bottom nav (60) + 16px padding
+              right: 16,
+              child: FloatingActionButton(
+                onPressed: () {
+                  context.push('/chatbot');
+                },
+                backgroundColor: const Color(0xFF297EFF),
+                elevation: 4,
+                child: const Icon(
+                  Icons.support_agent,
+                  color: Colors.white,
+                  size: 28,
+                ),
+              ),
+            ),
 
           // Custom Bottom Navigation Bar
           Positioned(
@@ -24,13 +45,13 @@ class MainLayout extends StatelessWidget {
             child: Container(
               height: 60,
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: colorScheme.surface,
                 border: Border(
-                  top: BorderSide(color: Colors.grey.withOpacity(0.1)),
+                  top: BorderSide(color: colorScheme.outline.withOpacity(0.14)),
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
+                    color: Colors.black.withOpacity(isDark ? 0 : 0.05),
                     blurRadius: 10,
                     offset: const Offset(0, -5),
                   ),
@@ -59,7 +80,10 @@ class MainLayout extends StatelessWidget {
     String label,
   ) {
     final isActive = navigationShell.currentIndex == index;
-    final color = isActive ? const Color(0xFF297EFF) : const Color(0xFF5E718D);
+    final colorScheme = Theme.of(context).colorScheme;
+    final color = isActive
+        ? const Color(0xFF297EFF)
+        : colorScheme.onSurfaceVariant;
 
     return GestureDetector(
       onTap: () => navigationShell.goBranch(

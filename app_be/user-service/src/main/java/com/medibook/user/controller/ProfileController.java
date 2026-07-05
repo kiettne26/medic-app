@@ -2,6 +2,7 @@ package com.medibook.user.controller;
 
 import com.medibook.common.dto.ApiResponse;
 import com.medibook.common.dto.PageResponse;
+import com.medibook.user.dto.EmailVerificationRequestResult;
 import com.medibook.user.dto.ProfileDto;
 import com.medibook.user.dto.UpdateProfileRequest;
 import com.medibook.user.service.ProfileService;
@@ -14,6 +15,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -41,6 +43,27 @@ public class ProfileController {
             @PathVariable UUID userId,
             @RequestBody UpdateProfileRequest request) {
         return ResponseEntity.ok(ApiResponse.success(profileService.updateProfile(userId, request)));
+    }
+
+
+    @PostMapping("/user/{userId}/email-verification/request")
+    @Operation(summary = "Gửi mã xác thực email")
+    public ResponseEntity<ApiResponse<EmailVerificationRequestResult>> requestEmailVerification(
+            @PathVariable UUID userId,
+            @RequestBody Map<String, String> request) {
+        return ResponseEntity.ok(ApiResponse.success(
+                "Verification code sent",
+                profileService.requestEmailVerification(userId, request.get("email"))));
+    }
+
+    @PostMapping("/user/{userId}/email-verification/confirm")
+    @Operation(summary = "Xac nhan email bang ma OTP")
+    public ResponseEntity<ApiResponse<ProfileDto>> confirmEmailVerification(
+            @PathVariable UUID userId,
+            @RequestBody Map<String, String> request) {
+        return ResponseEntity.ok(ApiResponse.success(
+                "Email verified",
+                profileService.confirmEmailVerification(userId, request.get("code"))));
     }
 
     // ===================== ADMIN ENDPOINTS =====================

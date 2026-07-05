@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:app_fe/features/notification/presentation/notification_provider.dart';
 import '../data/dto/doctor_dto.dart';
 import 'doctor_controller.dart';
 
 class DoctorScreen extends ConsumerStatefulWidget {
-  const DoctorScreen({super.key});
+  final String? initialSpecialty;
+  final String? initialSearch;
+  const DoctorScreen({super.key, this.initialSpecialty, this.initialSearch});
 
   @override
   ConsumerState<DoctorScreen> createState() => _DoctorScreenState();
@@ -20,6 +23,8 @@ class _DoctorScreenState extends ConsumerState<DoctorScreen> {
     'Nhi khoa',
     'Nội tiết',
     'Da liễu',
+    'Răng Hàm Mặt',
+    'Nội tổng quát',
     'Thần kinh',
     'Xương khớp',
   ];
@@ -27,9 +32,58 @@ class _DoctorScreenState extends ConsumerState<DoctorScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(doctorControllerProvider.notifier).loadDoctors();
+    if (widget.initialSearch != null && widget.initialSearch!.isNotEmpty) {
+      _searchController.text = widget.initialSearch!;
+    }
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await ref.read(doctorControllerProvider.notifier).loadDoctors();
+      if (widget.initialSpecialty != null &&
+          widget.initialSpecialty!.isNotEmpty) {
+        ref
+            .read(doctorControllerProvider.notifier)
+            .filterByCategory(widget.initialSpecialty!);
+      }
+      if (widget.initialSearch != null && widget.initialSearch!.isNotEmpty) {
+        ref
+            .read(doctorControllerProvider.notifier)
+            .search(widget.initialSearch!);
+      }
     });
+  }
+
+  @override
+  void didUpdateWidget(covariant DoctorScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.initialSpecialty != oldWidget.initialSpecialty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (widget.initialSpecialty != null &&
+            widget.initialSpecialty!.isNotEmpty) {
+          ref
+              .read(doctorControllerProvider.notifier)
+              .filterByCategory(widget.initialSpecialty!);
+        } else {
+          ref
+              .read(doctorControllerProvider.notifier)
+              .filterByCategory('Tất cả');
+        }
+      });
+    }
+    if (widget.initialSearch != oldWidget.initialSearch) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (widget.initialSearch != null &&
+            widget.initialSearch!.isNotEmpty) {
+          _searchController.text = widget.initialSearch!;
+          ref
+              .read(doctorControllerProvider.notifier)
+              .search(widget.initialSearch!);
+        } else {
+          _searchController.clear();
+          ref
+              .read(doctorControllerProvider.notifier)
+              .search('');
+        }
+      });
+    }
   }
 
   @override
@@ -58,6 +112,9 @@ class _DoctorScreenState extends ConsumerState<DoctorScreen> {
   }
 
   Widget _buildHeader() {
+    final hasUnreadNotifications =
+        ref.watch(unreadNotificationCountProvider) > 0;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
@@ -92,35 +149,39 @@ class _DoctorScreenState extends ConsumerState<DoctorScreen> {
               ),
             ),
           ),
-          Stack(
-            children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: Colors.transparent,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Icon(
-                  Icons.notifications_outlined,
-                  size: 24,
-                  color: Color(0xFF101418),
-                ),
-              ),
-              Positioned(
-                top: 10,
-                right: 8,
-                child: Container(
-                  width: 8,
-                  height: 8,
+          GestureDetector(
+            onTap: () => context.push('/notification'),
+            child: Stack(
+              children: [
+                Container(
+                  width: 48,
+                  height: 48,
                   decoration: BoxDecoration(
-                    color: Colors.red,
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white, width: 1),
+                    color: Colors.transparent,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(
+                    Icons.notifications_outlined,
+                    size: 24,
+                    color: Color(0xFF101418),
                   ),
                 ),
-              ),
-            ],
+                if (hasUnreadNotifications)
+                  Positioned(
+                    top: 10,
+                    right: 8,
+                    child: Container(
+                      width: 8,
+                      height: 8,
+                      decoration: BoxDecoration(
+                        color: Colors.red,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 1),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
           ),
         ],
       ),
@@ -397,7 +458,7 @@ class _DoctorScreenState extends ConsumerState<DoctorScreen> {
                         ),
                         const SizedBox(width: 6),
                         Text(
-                          'KHÔNG KHẢ DỤNG',
+                          'NGOẠI TUYẾN',
                           style: TextStyle(
                             color: Colors.grey[500],
                             fontSize: 10,
@@ -423,14 +484,12 @@ class _DoctorScreenState extends ConsumerState<DoctorScreen> {
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton.icon(
-                      onPressed: doctor.isAvailable == true
-                          ? () {
-                              context.push(
-                                '/select-service',
-                                extra: {'doctor': doctor},
-                              );
-                            }
-                          : null,
+                      onPressed: () {
+                        context.push(
+                          '/select-service',
+                          extra: {'doctor': doctor},
+                        );
+                      },
                       icon: const Icon(Icons.calendar_month, size: 18),
                       label: const Text(
                         'Đặt lịch ngay',

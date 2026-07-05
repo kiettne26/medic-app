@@ -18,7 +18,6 @@ _$DoctorDtoImpl _$$DoctorDtoImplFromJson(Map<String, dynamic> json) =>
       rating: (json['rating'] as num?)?.toDouble(),
       totalReviews: (json['totalReviews'] as num?)?.toInt(),
       isAvailable: json['isAvailable'] as bool? ?? true,
-      consultationFee: (json['consultationFee'] as num?)?.toDouble(),
       services: (json['services'] as List<dynamic>?)
           ?.map((e) => MedicalServiceDto.fromJson(e as Map<String, dynamic>))
           .toList(),
@@ -36,6 +35,5 @@ Map<String, dynamic> _$$DoctorDtoImplToJson(_$DoctorDtoImpl instance) =>
       'rating': instance.rating,
       'totalReviews': instance.totalReviews,
       'isAvailable': instance.isAvailable,
-      'consultationFee': instance.consultationFee,
       'services': instance.services,
     };

@@ -1,121 +1,103 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../data/dto/notification_dto.dart';
+import 'notification_provider.dart';
 
-class NotificationScreen extends StatefulWidget {
+class NotificationScreen extends ConsumerStatefulWidget {
   const NotificationScreen({super.key});
 
   @override
-  State<NotificationScreen> createState() => _NotificationScreenState();
+  ConsumerState<NotificationScreen> createState() => _NotificationScreenState();
 }
 
-class _NotificationScreenState extends State<NotificationScreen>
-    with SingleTickerProviderStateMixin {
-  late TabController _tabController;
-
-  // Dummy data - sẽ được thay bằng API sau
-  final List<NotificationItem> _allNotifications = [
-    NotificationItem(
-      id: '1',
-      type: NotificationType.appointment,
-      title: 'Xác nhận lịch hẹn mới',
-      message:
-          'Lịch hẹn khám của bạn với BS. Nguyễn Văn A vào lúc 09:00 ngày mai đã được xác nhận thành công.',
-      timeAgo: '5 phút',
-      isRead: false,
-      isToday: true,
-    ),
-    NotificationItem(
-      id: '2',
-      type: NotificationType.medication,
-      title: 'Nhắc nhở uống thuốc',
-      message:
-          'Đã đến giờ uống thuốc Paracetamol 500mg. Vui lòng uống thuốc sau khi ăn no.',
-      timeAgo: '1 giờ',
-      isRead: false,
-      isToday: true,
-    ),
-    NotificationItem(
-      id: '3',
-      type: NotificationType.system,
-      title: 'Cập nhật hệ thống',
-      message:
-          'Ứng dụng vừa được cập nhật phiên bản 2.4.0. Khám phá ngay các tính năng theo dõi sức khỏe mới.',
-      timeAgo: 'Hôm qua',
-      isRead: true,
-      isToday: false,
-    ),
-    NotificationItem(
-      id: '4',
-      type: NotificationType.labResult,
-      title: 'Kết quả xét nghiệm',
-      message:
-          'Kết quả xét nghiệm tổng quát của bạn đã có. Nhấp để xem chi tiết và lời khuyên từ bác sĩ.',
-      timeAgo: '2 ngày trước',
-      isRead: true,
-      isToday: false,
-    ),
-    NotificationItem(
-      id: '5',
-      type: NotificationType.promotion,
-      title: 'Ưu đãi đặc biệt',
-      message:
-          'Giảm ngay 20% gói khám tầm soát sức khỏe định kỳ cho cả gia đình trong tháng này.',
-      timeAgo: '3 ngày trước',
-      isRead: true,
-      isToday: false,
-    ),
-  ];
-
+class _NotificationScreenState extends ConsumerState<NotificationScreen> {
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    // Tự động làm mới danh sách khi mở trang
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(notificationProvider.notifier).refresh();
+    });
   }
 
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
+  IconData _getIconForType(String type) {
+    final normalizedType = type.toUpperCase();
+    if (_isCancellationType(normalizedType)) return Icons.event_busy_outlined;
+    if (_isReminderType(normalizedType)) return Icons.alarm_outlined;
+    if (_isBookingType(normalizedType)) return Icons.event_available_outlined;
+    return Icons.info_outline;
   }
 
-  List<NotificationItem> get _filteredNotifications {
-    switch (_tabController.index) {
-      case 1: // Hẹn khám
-        return _allNotifications
-            .where((n) => n.type == NotificationType.appointment)
-            .toList();
-      case 2: // Nhắc thuốc
-        return _allNotifications
-            .where((n) => n.type == NotificationType.medication)
-            .toList();
-      default: // Tất cả
-        return _allNotifications;
+  Color _getColorForType(String type) {
+    final normalizedType = type.toUpperCase();
+    if (_isCancellationType(normalizedType)) return const Color(0xFFEF4444);
+    if (_isReminderType(normalizedType)) return const Color(0xFF3982EF);
+    if (_isBookingType(normalizedType)) return const Color(0xFF00A86B);
+    return const Color(0xFF7C3AED);
+  }
+
+  String _formatTime(String createdAtStr) {
+    try {
+      final dateTime = DateTime.parse(createdAtStr).toLocal();
+      final now = DateTime.now();
+      final difference = now.difference(dateTime);
+
+      if (difference.inMinutes < 1) return 'Vừa xong';
+      if (difference.inMinutes < 60) return '${difference.inMinutes} phút trước';
+      if (difference.inHours < 24) return '${difference.inHours} giờ trước';
+      if (difference.inDays == 1) return 'Hôm qua';
+      return '${dateTime.day}/${dateTime.month}/${dateTime.year}';
+    } catch (_) {
+      return 'Vừa xong';
     }
   }
 
-  void _markAllAsRead() {
-    setState(() {
-      for (var notification in _allNotifications) {
-        notification.isRead = true;
-      }
-    });
+  bool _isToday(String createdAtStr) {
+    try {
+      final dateTime = DateTime.parse(createdAtStr).toLocal();
+      final now = DateTime.now();
+      return dateTime.year == now.year &&
+          dateTime.month == now.month &&
+          dateTime.day == now.day;
+    } catch (_) {
+      return true;
+    }
+  }
+
+  bool _isBookingType(String type) {
+    return type == 'BOOKING' ||
+        type == 'BOOKING_CREATED' ||
+        type == 'BOOKING_CONFIRMED';
+  }
+
+  bool _isReminderType(String type) => type == 'REMINDER';
+
+  bool _isCancellationType(String type) {
+    return type == 'BOOKING_CANCELLED' || type == 'BOOKING_CANCELED';
   }
 
   @override
   Widget build(BuildContext context) {
+    final notificationState = ref.watch(notificationProvider);
+    final unreadCount = ref.watch(unreadNotificationCountProvider);
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: colorScheme.surface,
         elevation: 0,
+        surfaceTintColor: Colors.transparent,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: Color(0xFF111418)),
+          icon: Icon(Icons.arrow_back_ios, color: colorScheme.onSurface),
           onPressed: () => context.pop(),
         ),
-        title: const Text(
+        title: Text(
           'Thông báo',
           style: TextStyle(
-            color: Color(0xFF111418),
+            color: colorScheme.onSurface,
             fontSize: 18,
             fontWeight: FontWeight.bold,
           ),
@@ -123,71 +105,88 @@ class _NotificationScreenState extends State<NotificationScreen>
         centerTitle: true,
         actions: [
           TextButton(
-            onPressed: _markAllAsRead,
+            onPressed: unreadCount == 0
+                ? null
+                : () => ref.read(notificationProvider.notifier).markAllAsRead(),
             child: const Text(
               'Đọc tất cả',
-              style: TextStyle(
-                color: Color(0xFF3982EF),
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
             ),
           ),
         ],
-        bottom: TabBar(
-          controller: _tabController,
-          onTap: (_) => setState(() {}),
-          indicatorColor: const Color(0xFF3982EF),
-          indicatorWeight: 2,
-          labelColor: const Color(0xFF3982EF),
-          unselectedLabelColor: Colors.grey[500],
-          labelStyle: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.bold,
+      ),
+      body: notificationState.when(
+        data: (list) => RefreshIndicator(
+          onRefresh: () => ref.read(notificationProvider.notifier).refresh(),
+          child: _buildNotificationList(list),
+        ),
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (err, stack) => Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.error_outline, size: 48, color: Colors.red),
+                const SizedBox(height: 16),
+                Text(
+                  'Lỗi tải thông báo: $err',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: Colors.red),
+                ),
+                const SizedBox(height: 16),
+                ElevatedButton(
+                  onPressed: () =>
+                      ref.read(notificationProvider.notifier).refresh(),
+                  child: const Text('Thử lại'),
+                ),
+              ],
+            ),
           ),
-          tabs: const [
-            Tab(text: 'Tất cả'),
-            Tab(text: 'Hẹn khám'),
-            Tab(text: 'Nhắc thuốc'),
-          ],
         ),
       ),
-      body: _buildNotificationList(),
     );
   }
 
-  Widget _buildNotificationList() {
-    final notifications = _filteredNotifications;
+  Widget _buildNotificationList(List<NotificationDto> notifications) {
+    final colorScheme = Theme.of(context).colorScheme;
 
     if (notifications.isEmpty) {
       return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.notifications_off_outlined,
-              size: 64,
-              color: Colors.grey[300],
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Không có thông báo nào',
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.grey[500],
-                fontWeight: FontWeight.w500,
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.notifications_off_outlined,
+                size: 64,
+                color: colorScheme.onSurfaceVariant.withOpacity(0.35),
               ),
-            ),
-          ],
+              const SizedBox(height: 16),
+              Text(
+                'Không có thông báo nào',
+                style: TextStyle(
+                  fontSize: 16,
+                  color: colorScheme.onSurfaceVariant,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
         ),
       );
     }
 
-    // Chia thông báo theo ngày
-    final todayNotifications = notifications.where((n) => n.isToday).toList();
-    final olderNotifications = notifications.where((n) => !n.isToday).toList();
+    final todayNotifications = notifications
+        .where((n) => _isToday(n.createdAt))
+        .toList();
+    final olderNotifications = notifications
+        .where((n) => !_isToday(n.createdAt))
+        .toList();
 
     return ListView(
+      physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.only(bottom: 80),
       children: [
         if (todayNotifications.isNotEmpty) ...[
@@ -203,6 +202,8 @@ class _NotificationScreenState extends State<NotificationScreen>
   }
 
   Widget _buildSectionHeader(String title) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
       child: Text(
@@ -210,48 +211,51 @@ class _NotificationScreenState extends State<NotificationScreen>
         style: TextStyle(
           fontSize: 12,
           fontWeight: FontWeight.bold,
-          color: Colors.grey[400],
+          color: colorScheme.onSurfaceVariant,
           letterSpacing: 1,
         ),
       ),
     );
   }
 
-  Widget _buildNotificationItem(NotificationItem notification) {
+  Widget _buildNotificationItem(NotificationDto notification) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final iconColor = _getColorForType(notification.type);
+    final unreadBackground = colorScheme.brightness == Brightness.dark
+        ? const Color(0xFF172554)
+        : const Color(0xFFF0F6FF);
+
     return InkWell(
       onTap: () {
-        setState(() {
-          notification.isRead = true;
-        });
-        // TODO: Navigate to notification detail
+        if (!notification.isRead) {
+          ref.read(notificationProvider.notifier).markAsRead(notification.id);
+        }
       },
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: notification.isRead ? colorScheme.surface : unreadBackground,
           border: Border(
-            bottom: BorderSide(color: Colors.grey.withOpacity(0.1)),
+            bottom: BorderSide(color: colorScheme.outline.withOpacity(0.12)),
           ),
         ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Icon
             Container(
               width: 48,
               height: 48,
               decoration: BoxDecoration(
-                color: notification.iconBackgroundColor.withOpacity(0.1),
+                color: iconColor.withOpacity(0.12),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(
-                notification.icon,
-                color: notification.iconBackgroundColor,
+                _getIconForType(notification.type),
+                color: iconColor,
                 size: 24,
               ),
             ),
             const SizedBox(width: 16),
-            // Content
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -263,20 +267,24 @@ class _NotificationScreenState extends State<NotificationScreen>
                       Expanded(
                         child: Text(
                           notification.title,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF111418),
+                            fontWeight: notification.isRead
+                                ? FontWeight.w600
+                                : FontWeight.bold,
+                            color: colorScheme.onSurface,
                           ),
                         ),
                       ),
+                      const SizedBox(width: 12),
                       Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
                           Text(
-                            notification.timeAgo,
+                            _formatTime(notification.createdAt),
                             style: TextStyle(
                               fontSize: 12,
-                              color: Colors.grey[400],
+                              color: colorScheme.onSurfaceVariant,
                               fontWeight: FontWeight.w500,
                             ),
                           ),
@@ -286,7 +294,7 @@ class _NotificationScreenState extends State<NotificationScreen>
                               width: 8,
                               height: 8,
                               decoration: const BoxDecoration(
-                                color: Color(0xFF3982EF),
+                                color: Colors.red,
                                 shape: BoxShape.circle,
                               ),
                             ),
@@ -302,9 +310,7 @@ class _NotificationScreenState extends State<NotificationScreen>
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       fontSize: 14,
-                      color: notification.isRead
-                          ? Colors.grey[500]
-                          : Colors.grey[600],
+                      color: colorScheme.onSurfaceVariant,
                       fontWeight: notification.isRead
                           ? FontWeight.normal
                           : FontWeight.w500,
@@ -317,59 +323,5 @@ class _NotificationScreenState extends State<NotificationScreen>
         ),
       ),
     );
-  }
-}
-
-// Notification types
-enum NotificationType { appointment, medication, system, labResult, promotion }
-
-// Notification model
-class NotificationItem {
-  final String id;
-  final NotificationType type;
-  final String title;
-  final String message;
-  final String timeAgo;
-  bool isRead;
-  final bool isToday;
-
-  NotificationItem({
-    required this.id,
-    required this.type,
-    required this.title,
-    required this.message,
-    required this.timeAgo,
-    required this.isRead,
-    required this.isToday,
-  });
-
-  IconData get icon {
-    switch (type) {
-      case NotificationType.appointment:
-        return Icons.event_available;
-      case NotificationType.medication:
-        return Icons.medication;
-      case NotificationType.system:
-        return Icons.info_outline;
-      case NotificationType.labResult:
-        return Icons.description_outlined;
-      case NotificationType.promotion:
-        return Icons.card_giftcard;
-    }
-  }
-
-  Color get iconBackgroundColor {
-    switch (type) {
-      case NotificationType.appointment:
-        return const Color(0xFF00C853);
-      case NotificationType.medication:
-        return const Color(0xFF3982EF);
-      case NotificationType.system:
-        return Colors.grey;
-      case NotificationType.labResult:
-        return const Color(0xFF00C853);
-      case NotificationType.promotion:
-        return const Color(0xFF3982EF);
-    }
   }
 }

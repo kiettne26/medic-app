@@ -66,8 +66,27 @@ public class ReviewService {
             distribution.put(rating, percentage);
         }
 
-        // TODO: Calculate monthly growth
-        double monthlyGrowth = 12.0; // Mock for now
+        // Tính toán mức tăng trưởng đánh giá hàng tháng
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime firstDayOfCurrentMonth = now.withDayOfMonth(1).withHour(0).withMinute(0).withSecond(0).withNano(0);
+        LocalDateTime firstDayOfLastMonth = firstDayOfCurrentMonth.minusMonths(1);
+
+        long thisMonthCount = reviews.stream()
+                .filter(r -> r.getCreatedAt() != null && !r.getCreatedAt().isBefore(firstDayOfCurrentMonth))
+                .count();
+
+        long lastMonthCount = reviews.stream()
+                .filter(r -> r.getCreatedAt() != null 
+                        && !r.getCreatedAt().isBefore(firstDayOfLastMonth) 
+                        && r.getCreatedAt().isBefore(firstDayOfCurrentMonth))
+                .count();
+
+        double monthlyGrowth = 0.0;
+        if (lastMonthCount > 0) {
+            monthlyGrowth = ((double) (thisMonthCount - lastMonthCount) / lastMonthCount) * 100.0;
+        } else if (thisMonthCount > 0) {
+            monthlyGrowth = 100.0;
+        }
 
         return ReviewStatsDto.builder()
                 .averageRating(Math.round(avg * 10.0) / 10.0)

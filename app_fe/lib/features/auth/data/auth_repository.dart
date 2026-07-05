@@ -11,13 +11,13 @@ class AuthRepository {
     return await _authApi.login(LoginRequest(email: email, password: password));
   }
 
-  Future<void> register(
+  Future<AuthResponse> register(
     String name,
     String email,
     String phone,
     String password,
   ) async {
-    await _authApi.register({
+    return await _authApi.register({
       'fullName': name,
       'email': email,
       'phone': phone,
@@ -39,6 +39,16 @@ class AuthRepository {
       'provider': provider,
       'token': token,
     });
+  }
+
+  Future<void> changePassword({
+    required String oldPassword,
+    required String newPassword,
+  }) {
+    return _authApi.changePassword(
+      oldPassword: oldPassword,
+      newPassword: newPassword,
+    );
   }
 }
 

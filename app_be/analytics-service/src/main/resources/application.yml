@@ -5,10 +5,14 @@ spring:
   application:
     name: analytics-service
   datasource:
-    url: "jdbc:postgresql://${SUPABASE_HOST:db.dslbtevbqmxlmulqxcqk.supabase.co}:${SUPABASE_PORT:5432}/postgres?stringtype=unspecified&prepareThreshold=0"
+    url: "jdbc:postgresql://${SUPABASE_HOST:db.sejuqjvdztgrrvclyevp.supabase.co}:${SUPABASE_PORT:5432}/postgres?stringtype=unspecified&prepareThreshold=0"
     username: ${SUPABASE_USER:postgres}
-    password: ${SUPABASE_PASSWORD:chukiet2609}
+    password: ${SUPABASE_PASSWORD:Chukiet26##}
     driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 1
+      connection-timeout: 30000
   jpa:
     hibernate:
       ddl-auto: none  # Read-only service

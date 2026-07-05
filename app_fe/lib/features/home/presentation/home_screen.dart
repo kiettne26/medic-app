@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:app_fe/config/router.dart';
+import 'package:app_fe/features/notification/presentation/notification_provider.dart';
 import '../../profile/presentation/user_provider.dart';
 import 'home_controller.dart';
 
@@ -14,6 +15,8 @@ class HomeScreen extends ConsumerStatefulWidget {
 }
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
+  final TextEditingController _searchController = TextEditingController();
+
   @override
   void initState() {
     super.initState();
@@ -21,6 +24,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(userProvider.notifier).refreshProfile();
     });
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   String _getGreeting() {
@@ -57,6 +66,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   Widget _buildHeader(String userName, String userAvatar) {
+    final hasUnreadNotifications =
+        ref.watch(unreadNotificationCountProvider) > 0;
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Row(
@@ -122,19 +134,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     color: Color(0xFF101418),
                   ),
                 ),
-                Positioned(
-                  top: 10,
-                  right: 10,
-                  child: Container(
-                    width: 10,
-                    height: 10,
-                    decoration: BoxDecoration(
-                      color: Colors.red,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 2),
+                if (hasUnreadNotifications)
+                  Positioned(
+                    top: 10,
+                    right: 10,
+                    child: Container(
+                      width: 10,
+                      height: 10,
+                      decoration: BoxDecoration(
+                        color: Colors.red,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 2),
+                      ),
                     ),
                   ),
-                ),
               ],
             ),
           ),
@@ -149,46 +162,68 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       child: Container(
         height: 56,
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
+          color: const Color(0xFFFFFFFF),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFFE3E8EF)),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 16,
+              offset: const Offset(0, 8),
             ),
           ],
         ),
-        child: Row(
-          children: [
-            Container(
-              width: 48,
-              height: 56,
-              decoration: const BoxDecoration(
-                color: Color(0xFFF0F2F5),
-                borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(12),
-                  bottomLeft: Radius.circular(12),
-                ),
-              ),
-              child: const Icon(Icons.search, color: Color(0xFF5E718D)),
+        child: TextField(
+          controller: _searchController,
+          textInputAction: TextInputAction.search,
+          style: const TextStyle(
+            color: Color(0xFF101418),
+            fontSize: 15,
+            fontWeight: FontWeight.w500,
+          ),
+          onSubmitted: (value) {
+            final query = value.trim();
+            if (query.isNotEmpty) {
+              context.go('/doctors?search=${Uri.encodeComponent(query)}');
+            }
+          },
+          decoration: InputDecoration(
+            hintText: 'Tìm kiếm bác sĩ, chuyên khoa...',
+            hintStyle: const TextStyle(
+              color: Color(0xFF7B8CA6),
+              fontSize: 15,
+              fontWeight: FontWeight.w500,
             ),
-            const Expanded(
-              child: TextField(
-                decoration: InputDecoration(
-                  hintText: 'Tìm kiếm bác sĩ, chuyên khoa...',
-                  hintStyle: TextStyle(
-                    color: Color(0xFF5E718D),
-                    fontWeight: FontWeight.normal,
-                  ),
-                  border: InputBorder.none,
-                  contentPadding: EdgeInsets.symmetric(horizontal: 16),
-                  fillColor: Color(0xFFF0F2F5),
-                  filled: true,
-                ),
-              ),
+            prefixIcon: IconButton(
+              tooltip: 'Tìm kiếm',
+              icon: const Icon(Icons.search_rounded, color: Color(0xFF5E718D)),
+              onPressed: () {
+                final query = _searchController.text.trim();
+                if (query.isNotEmpty) {
+                  context.go('/doctors?search=${Uri.encodeComponent(query)}');
+                }
+              },
             ),
-          ],
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16),
+              borderSide: BorderSide.none,
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16),
+              borderSide: BorderSide.none,
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16),
+              borderSide: const BorderSide(color: Color(0xFF297EFF)),
+            ),
+            filled: true,
+            fillColor: Colors.white,
+            isDense: false,
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 17,
+            ),
+          ),
         ),
       ),
     );
@@ -400,16 +435,33 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       {
         'icon': Icons.medical_services,
         'label': 'Đa khoa',
+        'specialty': 'Nội tổng quát',
         'color': Colors.blue,
       },
-      {'icon': Icons.monitor_heart, 'label': 'Tim mạch', 'color': Colors.red},
-      {'icon': Icons.child_care, 'label': 'Nhi khoa', 'color': Colors.green},
+      {
+        'icon': Icons.monitor_heart,
+        'label': 'Tim mạch',
+        'specialty': 'Tim mạch',
+        'color': Colors.red,
+      },
+      {
+        'icon': Icons.child_care,
+        'label': 'Nhi khoa',
+        'specialty': 'Nhi khoa',
+        'color': Colors.green,
+      },
       {
         'icon': Icons.medical_information,
         'label': 'Răng hàm',
+        'specialty': 'Răng Hàm Mặt',
         'color': Colors.orange,
       },
-      {'icon': Icons.visibility, 'label': 'Mắt', 'color': Colors.purple},
+      {
+        'icon': Icons.healing,
+        'label': 'Da liễu',
+        'specialty': 'Da liễu',
+        'color': Colors.purple,
+      },
     ];
 
     return Column(
@@ -428,7 +480,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 ),
               ),
               TextButton(
-                onPressed: () {},
+                onPressed: () {
+                  context.go('/doctors');
+                },
                 child: const Text(
                   'Tất cả',
                   style: TextStyle(
@@ -449,31 +503,37 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             separatorBuilder: (_, __) => const SizedBox(width: 16),
             itemBuilder: (context, index) {
               final service = services[index];
-              return Column(
-                children: [
-                  Container(
-                    width: 64,
-                    height: 64,
-                    decoration: BoxDecoration(
-                      color: (service['color'] as Color).withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(16),
+              return GestureDetector(
+                onTap: () {
+                  context.go('/doctors?specialty=${service['specialty']}');
+                },
+                behavior: HitTestBehavior.opaque,
+                child: Column(
+                  children: [
+                    Container(
+                      width: 64,
+                      height: 64,
+                      decoration: BoxDecoration(
+                        color: (service['color'] as Color).withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Icon(
+                        service['icon'] as IconData,
+                        color: service['color'] as Color,
+                        size: 32,
+                      ),
                     ),
-                    child: Icon(
-                      service['icon'] as IconData,
-                      color: service['color'] as Color,
-                      size: 32,
+                    const SizedBox(height: 8),
+                    Text(
+                      service['label'] as String,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF101418),
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    service['label'] as String,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF101418),
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               );
             },
           ),
@@ -649,7 +709,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                 Text(
                                   doctor.isAvailable == true
                                       ? 'Sẵn sàng tư vấn'
-                                      : 'Không khả dụng',
+                                      : 'Ngoại tuyến',
                                   style: TextStyle(
                                     color: doctor.isAvailable == true
                                         ? const Color(0xFF00C853)

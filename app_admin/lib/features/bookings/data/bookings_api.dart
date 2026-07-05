@@ -100,52 +100,15 @@ class BookingsApi {
     return BookingDto.fromJson(response.data['data']);
   }
 
-  /// Lấy thống kê lịch hẹn - Tính toán từ danh sách bookings
+  /// Lấy thống kê lịch hẹn
   Future<BookingStatsDto> getBookingStats() async {
     try {
-      // Lấy tất cả bookings để tính stats
-      final response = await _client.get(
-        '/bookings/admin',
-        queryParameters: {'page': 0, 'size': 1000},
-      );
-
+      final response = await _client.get('/bookings/admin/stats');
       if (response.data['data'] == null) {
         return const BookingStatsDto();
       }
-
-      final data = response.data['data'];
-      List<BookingDto> bookings = [];
-      
-      if (data is Map && data['content'] != null) {
-        bookings = (data['content'] as List)
-            .map((e) => BookingDto.fromJson(e))
-            .toList();
-      } else if (data is List) {
-        bookings = data.map((e) => BookingDto.fromJson(e)).toList();
-      }
-
-      // Tính toán stats
-      final today = DateTime.now();
-      final todayStr = '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
-      
-      final todayBookings = bookings.where((b) => b.timeSlot.date == todayStr).length;
-      final pendingCount = bookings.where((b) => b.status == 'PENDING').length;
-      final confirmedCount = bookings.where((b) => b.status == 'CONFIRMED').length;
-      final completedCount = bookings.where((b) => b.status == 'COMPLETED').length;
-      final canceledCount = bookings.where((b) => b.status == 'CANCELED').length;
-
-      return BookingStatsDto(
-        totalToday: todayBookings,
-        pendingCount: pendingCount,
-        confirmedCount: confirmedCount,
-        completedCount: completedCount,
-        canceledCount: canceledCount,
-        todayChangePercent: 5.0, // Placeholder
-        pendingChangePercent: -2.0, // Placeholder
-        completedChangePercent: 10.0, // Placeholder
-      );
+      return BookingStatsDto.fromJson(response.data['data']);
     } catch (e) {
-      // Return default stats if API not available
       return const BookingStatsDto();
     }
   }

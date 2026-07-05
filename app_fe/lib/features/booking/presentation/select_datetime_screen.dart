@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../data/dto/service_dto.dart';
 import 'booking_controller.dart';
 import '../data/dto/booking_dto.dart';
+import 'widgets/doctor_avatar.dart';
 
 class SelectDateTimeScreen extends ConsumerStatefulWidget {
   final List<ServiceDto> selectedServices;
@@ -166,26 +167,12 @@ class _SelectDateTimeScreenState extends ConsumerState<SelectDateTimeScreen> {
       ),
       child: Row(
         children: [
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(12),
-              color: Colors.grey[300],
-              image:
-                  widget.doctorAvatarUrl != null &&
-                      widget.doctorAvatarUrl!.isNotEmpty
-                  ? DecorationImage(
-                      image: NetworkImage(widget.doctorAvatarUrl!),
-                      fit: BoxFit.cover,
-                    )
-                  : null,
-            ),
-            child:
-                widget.doctorAvatarUrl == null ||
-                    widget.doctorAvatarUrl!.isEmpty
-                ? const Icon(Icons.person, size: 28, color: Colors.grey)
-                : null,
+          DoctorAvatar(
+            imageUrl: widget.doctorAvatarUrl,
+            size: 48,
+            radius: 12,
+            backgroundColor: Colors.grey.shade300,
+            iconColor: Colors.grey,
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -397,18 +384,44 @@ class _SelectDateTimeScreenState extends ConsumerState<SelectDateTimeScreen> {
                 ),
               ),
             ),
-            data: (slots) {
+            data: (rawSlots) {
+              // Lọc bỏ các khung giờ trong quá khứ nếu ngày được chọn là hôm nay
+              final isTodaySelected = _isSameDay(_selectedDate, DateTime.now());
+              final slots = rawSlots.where((slot) {
+                if (!isTodaySelected) return true;
+
+                try {
+                  // Phân tích giờ và phút từ startTime (ví dụ "08:30:00")
+                  final parts = slot.startTime.split(':');
+                  final hour = int.parse(parts[0]);
+                  final minute = int.parse(parts[1]);
+
+                  final now = DateTime.now();
+                  if (hour < now.hour) return false;
+                  if (hour == now.hour && minute <= now.minute) return false;
+                  return true;
+                } catch (e) {
+                  return true; // Dự phòng hiển thị nếu parse lỗi
+                }
+              }).toList();
+
               if (slots.isEmpty) {
                 return const Center(
                   child: Padding(
                     padding: EdgeInsets.all(30),
-                    child: Text('Không có lịch trống cho ngày này'),
+                    child: Text(
+                      'Không còn lịch trống khả dụng cho hôm nay',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: Colors.grey,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
                   ),
                 );
               }
 
-              // Separate slots into morning and afternoon logic if needed,
-              // or just simple grid. Doing simple grid for now as backend returns list.
+              // Hiển thị danh sách khung giờ khả dụng dưới dạng Grid
               return GridView.builder(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),

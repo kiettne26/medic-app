@@ -25,13 +25,21 @@ class DoctorsApi {
     return DoctorDto.fromJson(response.data['data']);
   }
 
-  // Admin Endpoints
-  Future<void> createDoctor(Map<String, dynamic> data) async {
-    await _client.post('/doctors', data: data);
+  /// Tạo bác sĩ mới với tài khoản đăng nhập
+  /// Gọi API: POST /auth/admin/create-doctor
+  Future<Map<String, dynamic>> createDoctorWithAccount(Map<String, dynamic> data) async {
+    final response = await _client.post('/auth/admin/create-doctor', data: data);
+    return response.data['data'];
   }
 
+  /// Cập nhật thông tin bác sĩ (không tạo tài khoản mới)
   Future<void> updateDoctor(String id, Map<String, dynamic> data) async {
     await _client.put('/doctors/$id', data: data);
+  }
+
+  /// [DEPRECATED] Tạo doctor profile (cần userId có sẵn)
+  Future<void> createDoctor(Map<String, dynamic> data) async {
+    await _client.post('/doctors', data: data);
   }
 
   Future<void> deleteDoctor(String id) async {

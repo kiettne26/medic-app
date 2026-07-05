@@ -183,34 +183,34 @@ _NavItem(
           ),
         ),
 
-        // Bottom Button
+        // Logout Button
         Padding(
-          padding: const EdgeInsets.all(16),
-          child: Container(
-            decoration: const BoxDecoration(
-              border: Border(top: BorderSide(color: AdminColors.borderLight)),
-            ),
-            padding: const EdgeInsets.only(top: 16),
-            child: SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: () {},
-                icon: const Icon(Icons.add, size: 18),
-                label: Text(
-                  '',
-                  style: GoogleFonts.manrope(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
-                  ),
+          padding: const EdgeInsets.all(24),
+          child: SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: () async {
+                await ref.read(authControllerProvider.notifier).logout();
+                if (context.mounted) {
+                  context.go('/login');
+                }
+              },
+              style: OutlinedButton.styleFrom(
+                foregroundColor: Colors.red,
+                side: BorderSide.none,
+                backgroundColor: Colors.grey[50],
+                alignment: Alignment.center,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
                 ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AdminColors.primary,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  elevation: 0,
+              ),
+              icon: const Icon(Icons.logout, size: 20),
+              label: Text(
+                'Đăng xuất',
+                style: GoogleFonts.manrope(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
                 ),
               ),
             ),
