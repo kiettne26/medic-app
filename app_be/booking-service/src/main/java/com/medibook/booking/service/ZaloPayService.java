@@ -74,7 +74,18 @@ public class ZaloPayService {
             long amount = toVnd(booking.getTotalAmount());
             long appTime = System.currentTimeMillis();
             String appTransId = buildAppTransId(booking.getId(), appTime);
-            String mockOrderUrl = "http://localhost:8080/api/bookings/payment/mock-gate?app_trans_id=" + appTransId
+            
+            String gatewayBase = "http://localhost:8080";
+            if (callbackUrl != null && !callbackUrl.isBlank()) {
+                try {
+                    java.net.URI uri = new java.net.URI(callbackUrl);
+                    gatewayBase = uri.getScheme() + "://" + uri.getAuthority();
+                } catch (Exception e) {
+                    log.warn("Failed to parse callbackUrl to get gateway base URL, using default", e);
+                }
+            }
+            
+            String mockOrderUrl = gatewayBase + "/api/bookings/payment/mock-gate?app_trans_id=" + appTransId
                     + "&method=" + paymentMethod.name();
             
             return PaymentInitDto.builder()
