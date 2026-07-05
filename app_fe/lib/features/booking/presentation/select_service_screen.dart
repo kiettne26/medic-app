@@ -247,17 +247,25 @@ class _SelectServiceScreenState extends ConsumerState<SelectServiceScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    (widget.doctor!.fullName ?? "").startsWith('BS.') ||
-                            (widget.doctor!.fullName ?? "").startsWith('Bác sĩ') ||
-                            (widget.doctor!.fullName ?? "").startsWith('Bác Sĩ')
-                        ? (widget.doctor!.fullName ?? "")
-                        : 'BS. ${widget.doctor!.fullName ?? ""}',
-                    style: const TextStyle(
-                      color: Color(0xFF101418),
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
+                  Builder(
+                    builder: (context) {
+                      final name = widget.doctor!.fullName ?? "";
+                      final cleaned = name.toLowerCase().trim();
+                      final hasPrefix = cleaned.startsWith('bs.') ||
+                          cleaned.startsWith('bs ') ||
+                          cleaned.startsWith('bác sĩ') ||
+                          cleaned.startsWith('bác sỹ') ||
+                          cleaned.startsWith('bac si') ||
+                          cleaned.startsWith('bac sy');
+                      return Text(
+                        hasPrefix ? name : 'BS. $name',
+                        style: const TextStyle(
+                          color: Color(0xFF101418),
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      );
+                    },
                   ),
                   const SizedBox(height: 4),
                   Text(
