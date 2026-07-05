@@ -669,7 +669,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
             if (url.startsWith('http')) {
               _avatarUrl = url;
             } else {
-              _avatarUrl = "https://medibook.dpdns.org$url";
+              _avatarUrl = "https://mocha-exchange-scoff.ngrok-free.app$url";
             }
           } else {
             ScaffoldMessenger.of(context).showSnackBar(

@@ -18,7 +18,7 @@ class DoctorLifecycleObserver extends StatefulWidget {
 class _DoctorLifecycleObserverState extends State<DoctorLifecycleObserver>
     with WidgetsBindingObserver {
   final _storage = const FlutterSecureStorage();
-  final _dio = Dio(BaseOptions(baseUrl: 'https://medibook.dpdns.org'));
+  final _dio = Dio(BaseOptions(baseUrl: 'https://mocha-exchange-scoff.ngrok-free.app'));
 
   @override
   void initState() {

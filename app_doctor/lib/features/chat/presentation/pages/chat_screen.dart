@@ -90,7 +90,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     if (docUserId == null || convId.isEmpty) return;
     try {
       final url = Uri.parse(
-        'https://medibook.dpdns.org/api/chat/conversation/$convId/read?readerId=$docUserId',
+        'https://mocha-exchange-scoff.ngrok-free.app/api/chat/conversation/$convId/read?readerId=$docUserId',
       );
       await http.post(url);
       print('Marked messages as read for conversation: $convId');
@@ -108,7 +108,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       // For now using the same endpoint but swapping params if needed or relying on backend handling.
       // Actually backend likely expects 'userId' (patient) and 'doctorId'.
       final url = Uri.parse(
-        'https://medibook.dpdns.org/api/chat/conversation?userId=${widget.conversation.patientId}&doctorId=$_doctorId',
+        'https://mocha-exchange-scoff.ngrok-free.app/api/chat/conversation?userId=${widget.conversation.patientId}&doctorId=$_doctorId',
       );
       final response = await http.get(url);
 
@@ -141,7 +141,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   }
 
   void _connectWebSocket() {
-    final socketUrl = 'wss://medibook.dpdns.org/ws';
+    final socketUrl = 'wss://mocha-exchange-scoff.ngrok-free.app/ws';
 
     if (mounted) {
       setState(() {
@@ -151,7 +151,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
     client = StompClient(
       config: StompConfig.sockJS(
-        url: 'https://medibook.dpdns.org/ws',
+        url: 'https://mocha-exchange-scoff.ngrok-free.app/ws',
         onConnect: onConnect,
         beforeConnect: () async {
           print('waiting to connect...');
@@ -300,7 +300,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   /// Upload ảnh lên server và trả về URL
   Future<String?> _uploadImage(XFile imageFile) async {
     try {
-      final uri = Uri.parse('https://medibook.dpdns.org/api/users/upload');
+      final uri = Uri.parse('https://mocha-exchange-scoff.ngrok-free.app/api/users/upload');
       final request = http.MultipartRequest('POST', uri);
 
       final bytes = await imageFile.readAsBytes();

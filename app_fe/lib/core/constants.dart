@@ -13,5 +13,5 @@ class AppColors {
 
 class AppConstants {
   static const String appName = 'Medic Booking';
-  static const String baseUrl = 'https://medibook.dpdns.org'; // Using Cloudflare Tunnel
+  static const String baseUrl = 'https://mocha-exchange-scoff.ngrok-free.app'; // Using Ngrok Free Static Domain
 }
