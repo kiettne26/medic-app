@@ -660,7 +660,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
       if (mounted) setState(() => _isLoading = true);
 
       final profileApi = ref.read(profileApiProvider);
-      final url = await profileApi.uploadAvatar(File(image.path));
+      final url = await profileApi.uploadAvatar(image);
 
       if (mounted) {
         setState(() {

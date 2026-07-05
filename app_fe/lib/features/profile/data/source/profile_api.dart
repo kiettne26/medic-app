@@ -1,7 +1,8 @@
-﻿import 'package:dio/dio.dart';
+import 'package:dio/dio.dart';
 import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:app_fe/core/network/dio_provider.dart';
+import 'package:image_picker/image_picker.dart';
 import '../dto/profile_dto.dart';
 
 class ProfileApi {
@@ -77,11 +78,12 @@ class ProfileApi {
       return null;
     }
   }
-  Future<String?> uploadAvatar(File file) async {
+
+  Future<String?> uploadAvatar(XFile file) async {
     try {
-      String fileName = file.path.split('/').last;
+      final bytes = await file.readAsBytes();
       FormData formData = FormData.fromMap({
-        "file": await MultipartFile.fromFile(file.path, filename: fileName),
+        "file": MultipartFile.fromBytes(bytes, filename: file.name),
       });
 
       final response = await _dio.post('/api/users/upload', data: formData);

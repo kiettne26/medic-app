@@ -4,7 +4,7 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'config/router.dart';
 import 'core/constants.dart';
 import 'core/theme/theme_controller.dart';
-
+// ngrok http --url=https://mocha-exchange-scoff.ngrok-free.dev 8080
 // scrcpy
 // .\run_dev.bat
 void main() async {
