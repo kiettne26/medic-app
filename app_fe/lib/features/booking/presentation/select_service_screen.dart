@@ -248,7 +248,11 @@ class _SelectServiceScreenState extends ConsumerState<SelectServiceScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'BS. ${widget.doctor!.fullName ?? ""}',
+                    (widget.doctor!.fullName ?? "").startsWith('BS.') ||
+                            (widget.doctor!.fullName ?? "").startsWith('Bác sĩ') ||
+                            (widget.doctor!.fullName ?? "").startsWith('Bác Sĩ')
+                        ? (widget.doctor!.fullName ?? "")
+                        : 'BS. ${widget.doctor!.fullName ?? ""}',
                     style: const TextStyle(
                       color: Color(0xFF101418),
                       fontSize: 18,

@@ -102,6 +102,7 @@ public class DoctorService {
                 .description(request.getDescription())
                 .phone(request.getPhone())
                 .avatarUrl(request.getAvatarUrl())
+                .consultationFee(request.getConsultationFee())
                 .isAvailable(request.getIsAvailable() != null ? request.getIsAvailable() : true)
                 .build();
 
@@ -128,6 +129,7 @@ public class DoctorService {
         doctor.setDescription(request.getDescription());
         doctor.setPhone(request.getPhone());
         doctor.setAvatarUrl(request.getAvatarUrl());
+        doctor.setConsultationFee(request.getConsultationFee());
         if (request.getIsAvailable() != null) {
             doctor.setIsAvailable(request.getIsAvailable());
         }
@@ -221,6 +223,7 @@ public class DoctorService {
                 .rating(doctor.getRating())
                 .totalReviews(doctor.getTotalReviews())
                 .isAvailable(doctor.getIsAvailable())
+                .consultationFee(doctor.getConsultationFee())
                 .services(serviceDtos)
                 .build();
     }

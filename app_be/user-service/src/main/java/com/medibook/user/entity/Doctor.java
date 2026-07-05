@@ -43,6 +43,9 @@ public class Doctor {
     @Column(name = "avatar_url")
     private String avatarUrl;
 
+    @Column(name = "consultation_fee")
+    private Double consultationFee;
+
     @Column
     @Builder.Default
     private Double rating = 0.0;

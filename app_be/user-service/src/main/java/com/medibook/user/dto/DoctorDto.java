@@ -23,5 +23,6 @@ public class DoctorDto {
     private Double rating;
     private Integer totalReviews;
     private Boolean isAvailable;
+    private Double consultationFee;
     private List<MedicalServiceDto> services;
 }

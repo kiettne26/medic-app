@@ -6,7 +6,12 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../data/dto/doctor_dto.dart';
 import '../data/dto/review_dto.dart';
 import '../data/source/review_api.dart';
+import '../data/doctor_repository.dart';
 import 'doctor_controller.dart';
+
+final doctorDetailProvider = FutureProvider.family<DoctorDto, String>((ref, id) {
+  return ref.watch(doctorRepositoryProvider).getDoctorById(id);
+});
 
 class DoctorDetailScreen extends ConsumerStatefulWidget {
   final String doctorId;
@@ -75,50 +80,103 @@ class _DoctorDetailScreenState extends ConsumerState<DoctorDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final doctorState = ref.watch(doctorControllerProvider);
-    final doctor = doctorState.doctors.firstWhere(
-      (d) => d.id == widget.doctorId,
-      orElse: () => DoctorDto(id: widget.doctorId),
-    );
+    final doctorAsync = ref.watch(doctorDetailProvider(widget.doctorId));
 
-    return Theme(
-      data: Theme.of(context).copyWith(
-        textTheme: GoogleFonts.manropeTextTheme(Theme.of(context).textTheme),
+    return doctorAsync.when(
+      loading: () => Scaffold(
+        backgroundColor: const Color(0xFFF5F7F8),
+        body: Column(
+          children: [
+            _buildHeader(context),
+            const Expanded(
+              child: Center(
+                child: CircularProgressIndicator(color: Color(0xFF297EFF)),
+              ),
+            ),
+          ],
+        ),
       ),
-      child: Scaffold(
-        backgroundColor: const Color(0xFFF5F7F8), // background-light
+      error: (err, stack) => Scaffold(
+        backgroundColor: const Color(0xFFF5F7F8),
         body: Column(
           children: [
             _buildHeader(context),
             Expanded(
-              child: SingleChildScrollView(
-                controller: _scrollController,
-                child: Column(
-                  children: [
-                    _buildProfileHeader(doctor),
-                    _buildQuickStats(doctor),
-                    _buildTabs(),
-                    Container(
-                      key: _aboutKey,
-                      child: _buildAboutSection(doctor),
-                    ),
-                    Container(
-                      key: _experienceKey,
-                      child: _buildExperienceSection(doctor),
-                    ),
-                    Container(
-                      key: _reviewsKey,
-                      child: _buildReviewsSection(doctor),
-                    ),
-                    const SizedBox(height: 120),
-                  ],
+              child: Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(24.0),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.error_outline, size: 48, color: Colors.red),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Không thể tải thông tin bác sĩ: $err',
+                        style: const TextStyle(color: Colors.red, fontSize: 16, fontWeight: FontWeight.w600),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 16),
+                      ElevatedButton(
+                        onPressed: () => ref.refresh(doctorDetailProvider(widget.doctorId)),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF297EFF),
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        child: const Text('Thử lại'),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
           ],
         ),
-        bottomNavigationBar: _buildBottomActionBar(doctor),
       ),
+      data: (doctor) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            textTheme: GoogleFonts.manropeTextTheme(Theme.of(context).textTheme),
+          ),
+          child: Scaffold(
+            backgroundColor: const Color(0xFFF5F7F8), // background-light
+            body: Column(
+              children: [
+                _buildHeader(context),
+                Expanded(
+                  child: SingleChildScrollView(
+                    controller: _scrollController,
+                    child: Column(
+                      children: [
+                        _buildProfileHeader(doctor),
+                        _buildQuickStats(doctor),
+                        _buildTabs(),
+                        Container(
+                          key: _aboutKey,
+                          child: _buildAboutSection(doctor),
+                        ),
+                        _buildServicesSection(doctor),
+                        Container(
+                          key: _experienceKey,
+                          child: _buildExperienceSection(doctor),
+                        ),
+                        Container(
+                          key: _reviewsKey,
+                          child: _buildReviewsSection(doctor),
+                        ),
+                        const SizedBox(height: 120),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            bottomNavigationBar: _buildBottomActionBar(doctor),
+          ),
+        );
+      },
     );
   }
 
@@ -289,6 +347,42 @@ class _DoctorDetailScreenState extends ConsumerState<DoctorDetailScreen> {
               fontWeight: FontWeight.w600,
             ),
           ),
+          if (doctor.consultationFee != null && doctor.consultationFee! > 0) ...[
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: const Color(0xFF297EFF).withOpacity(0.08),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                'Phí khám: ${_formatCurrency(doctor.consultationFee!)}',
+                style: const TextStyle(
+                  color: Color(0xFF297EFF),
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+          if (doctor.phone != null && doctor.phone!.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.phone, size: 14, color: Color(0xFF5E718D)),
+                const SizedBox(width: 4),
+                Text(
+                  doctor.phone!,
+                  style: const TextStyle(
+                    color: Color(0xFF5E718D),
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );
@@ -974,7 +1068,106 @@ class _DoctorDetailScreenState extends ConsumerState<DoctorDetailScreen> {
     );
   }
 
+  Widget _buildServicesSection(DoctorDto doctor) {
+    final services = doctor.services ?? [];
+    if (services.isEmpty) return const SizedBox.shrink();
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+      width: double.infinity,
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        border: Border(
+          bottom: BorderSide(color: Color(0xFFDADFE7), width: 1),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Dịch vụ y tế cung cấp',
+            style: TextStyle(
+              color: Color(0xFF101418),
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 16),
+          ListView.separated(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: services.length,
+            separatorBuilder: (context, index) => const SizedBox(height: 12),
+            itemBuilder: (context, index) {
+              final service = services[index];
+              return Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF5F7F8),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFFDADFE7), width: 1),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 48,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF297EFF).withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(
+                        Icons.medical_services_outlined,
+                        color: Color(0xFF297EFF),
+                        size: 24,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            service.name,
+                            style: const TextStyle(
+                              color: Color(0xFF101418),
+                              fontSize: 15,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          if (service.durationMinutes != null) ...[
+                            const SizedBox(height: 4),
+                            Text(
+                              'Thời lượng: ${service.durationMinutes} phút',
+                              style: const TextStyle(
+                                color: Color(0xFF5E718D),
+                                fontSize: 13,
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                    Text(
+                      _formatCurrency(service.price ?? 0),
+                      style: const TextStyle(
+                        color: Color(0xFF297EFF),
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildBottomActionBar(DoctorDto doctor) {
+    final hasFee = doctor.consultationFee != null && doctor.consultationFee! > 0;
     return Container(
       padding: EdgeInsets.only(
         left: 16,
@@ -1008,7 +1201,33 @@ class _DoctorDetailScreenState extends ConsumerState<DoctorDetailScreen> {
               ),
             ),
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 12),
+          if (hasFee) ...[
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Phí tư vấn',
+                  style: TextStyle(
+                    color: Color(0xFF5E718D),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  _formatCurrency(doctor.consultationFee!),
+                  style: const TextStyle(
+                    color: Color(0xFF101418),
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(width: 16),
+          ],
           Expanded(
             child: SizedBox(
               height: 56,
@@ -1031,7 +1250,7 @@ class _DoctorDetailScreenState extends ConsumerState<DoctorDetailScreen> {
                 ),
                 child: const Text(
                   'Đặt lịch ngay',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
               ),
             ),
