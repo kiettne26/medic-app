@@ -111,7 +111,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         print('Fetching doctor details in ChatScreen from: $endpoint');
         final response = await http.get(
           Uri.parse(endpoint),
-          headers: {'Accept': 'application/json'},
+          headers: {
+            'Accept': 'application/json',
+            'ngrok-skip-browser-warning': 'true',
+          },
         );
         if (response.statusCode == 200) {
           final body = json.decode(response.body);
@@ -150,7 +153,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       final url = Uri.parse(
         'https://mocha-exchange-scoff.ngrok-free.dev/api/chat/conversation?userId=$_userId&doctorId=$docUserId',
       );
-      final response = await http.get(url);
+      final response = await http.get(url, headers: {'ngrok-skip-browser-warning': 'true'});
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
@@ -343,6 +346,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     try {
       final uri = Uri.parse('https://mocha-exchange-scoff.ngrok-free.dev/api/users/upload');
       final request = http.MultipartRequest('POST', uri);
+      request.headers['ngrok-skip-browser-warning'] = 'true';
 
       final bytes = await imageFile.readAsBytes();
       request.files.add(
