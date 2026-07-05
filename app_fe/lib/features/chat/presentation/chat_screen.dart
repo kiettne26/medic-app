@@ -100,10 +100,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         
         if (_doctor?.userId != null && _doctor!.userId!.isNotEmpty) {
           identifier = _doctor!.userId;
-          endpoint = 'https://mocha-exchange-scoff.ngrok-free.app/api/doctors/user/$identifier';
+          endpoint = 'https://mocha-exchange-scoff.ngrok-free.dev/api/doctors/user/$identifier';
         } else if (_doctor?.id != null && _doctor!.id.isNotEmpty) {
           identifier = _doctor!.id;
-          endpoint = 'https://mocha-exchange-scoff.ngrok-free.app/api/doctors/$identifier';
+          endpoint = 'https://mocha-exchange-scoff.ngrok-free.dev/api/doctors/$identifier';
         } else {
           return;
         }
@@ -148,7 +148,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
     try {
       final url = Uri.parse(
-        'https://mocha-exchange-scoff.ngrok-free.app/api/chat/conversation?userId=$_userId&doctorId=$docUserId',
+        'https://mocha-exchange-scoff.ngrok-free.dev/api/chat/conversation?userId=$_userId&doctorId=$docUserId',
       );
       final response = await http.get(url);
 
@@ -182,7 +182,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
   void _connectWebSocket() {
     // URL logic: Use localhost with ADB reverse tunnel
-    final socketUrl = 'wss://mocha-exchange-scoff.ngrok-free.app/ws';
+    final socketUrl = 'wss://mocha-exchange-scoff.ngrok-free.dev/ws';
 
     if (mounted) {
       setState(() {
@@ -192,7 +192,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
     client = StompClient(
       config: StompConfig.sockJS(
-        url: 'https://mocha-exchange-scoff.ngrok-free.app/ws', // Use HTTP for SockJS fallback
+        url: 'https://mocha-exchange-scoff.ngrok-free.dev/ws', // Use HTTP for SockJS fallback
         onConnect: onConnect,
         beforeConnect: () async {
           print('waiting to connect...');
@@ -341,7 +341,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   /// Upload ảnh lên server và trả về URL
   Future<String?> _uploadImage(XFile imageFile) async {
     try {
-      final uri = Uri.parse('https://mocha-exchange-scoff.ngrok-free.app/api/users/upload');
+      final uri = Uri.parse('https://mocha-exchange-scoff.ngrok-free.dev/api/users/upload');
       final request = http.MultipartRequest('POST', uri);
 
       final bytes = await imageFile.readAsBytes();

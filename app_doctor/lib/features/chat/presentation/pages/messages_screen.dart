@@ -41,7 +41,7 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
 
     _stompClient = StompClient(
       config: StompConfig.sockJS(
-        url: 'https://mocha-exchange-scoff.ngrok-free.app/ws',
+        url: 'https://mocha-exchange-scoff.ngrok-free.dev/ws',
         onConnect: _onStompConnect,
         beforeConnect: () async {
           print('MessagesScreen: Waiting to connect WebSocket...');
@@ -92,7 +92,7 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
       // Call API to get conversations
       final response = await http.get(
         Uri.parse(
-          'https://mocha-exchange-scoff.ngrok-free.app/api/chat/conversations?userId=$_doctorId&isDoctor=true',
+          'https://mocha-exchange-scoff.ngrok-free.dev/api/chat/conversations?userId=$_doctorId&isDoctor=true',
         ),
         headers: {'Content-Type': 'application/json'},
       );
@@ -240,7 +240,7 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
                         // Gọi API đánh dấu đã đọc ở backend
                         try {
                           final url = Uri.parse(
-                            'https://mocha-exchange-scoff.ngrok-free.app/api/chat/conversation/${conversation.id}/read?readerId=$_doctorId',
+                            'https://mocha-exchange-scoff.ngrok-free.dev/api/chat/conversation/${conversation.id}/read?readerId=$_doctorId',
                           );
                           await http.post(url);
                         } catch (e) {

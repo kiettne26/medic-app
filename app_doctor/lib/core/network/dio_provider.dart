@@ -4,7 +4,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 final dioProvider = Provider<Dio>((ref) {
   // Development: Use localhost with run_dev.bat (auto-runs adb reverse)
-  final String baseUrl = 'https://mocha-exchange-scoff.ngrok-free.app';
+  final String baseUrl = 'https://mocha-exchange-scoff.ngrok-free.dev';
 
   final dio = Dio(
     BaseOptions(
