@@ -448,7 +448,7 @@ class AppointmentDetailScreen extends ConsumerWidget {
                 ],
               ),
             ),
-          ] else if (status == 'CANCELLED') ...[
+          ] else if (status == 'CANCELED') ...[
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(16),
@@ -523,7 +523,8 @@ class AppointmentDetailScreen extends ConsumerWidget {
     BuildContext context,
     AppointmentController controller,
   ) {
-    final notesController = TextEditingController();
+    final diagnosisController = TextEditingController();
+    final adviceController = TextEditingController();
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -531,13 +532,50 @@ class AppointmentDetailScreen extends ConsumerWidget {
           'Hoàn thành lịch hẹn',
           style: GoogleFonts.manrope(fontWeight: FontWeight.bold),
         ),
-        content: TextField(
-          controller: notesController,
-          decoration: const InputDecoration(
-            hintText: 'Nhập ghi chú của bác sĩ (không bắt buộc)...',
-            border: OutlineInputBorder(),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Chẩn đoán bệnh',
+                style: GoogleFonts.manrope(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: const Color(0xFF0C131D),
+                ),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: diagnosisController,
+                decoration: const InputDecoration(
+                  hintText: 'Nhập chẩn đoán (ví dụ: Viêm họng cấp)...',
+                  border: OutlineInputBorder(),
+                  contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                ),
+                maxLines: 2,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Dặn dò của bác sĩ',
+                style: GoogleFonts.manrope(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: const Color(0xFF0C131D),
+                ),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: adviceController,
+                decoration: const InputDecoration(
+                  hintText: 'Nhập dặn dò (ví dụ: Nghỉ ngơi, uống nhiều nước)...',
+                  border: OutlineInputBorder(),
+                  contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                ),
+                maxLines: 3,
+              ),
+            ],
           ),
-          maxLines: 3,
         ),
         actions: [
           TextButton(
@@ -546,9 +584,17 @@ class AppointmentDetailScreen extends ConsumerWidget {
           ),
           ElevatedButton(
             onPressed: () async {
+              final diagnosis = diagnosisController.text.trim();
+              final advice = adviceController.text.trim();
+
+              final List<String> notesParts = [];
+              if (diagnosis.isNotEmpty) notesParts.add('Chẩn đoán: $diagnosis');
+              if (advice.isNotEmpty) notesParts.add('Dặn dò: $advice');
+              final fullNotes = notesParts.join('\n');
+
               final success = await controller.completeBooking(
                 booking.id,
-                notes: notesController.text,
+                notes: fullNotes,
               );
               if (ctx.mounted) Navigator.pop(ctx);
               if (success && context.mounted) context.pop();
@@ -582,7 +628,7 @@ class AppointmentDetailScreen extends ConsumerWidget {
         textColor = successColor;
         label = 'Hoàn thành';
         break;
-      case 'CANCELLED':
+      case 'CANCELED':
         bgColor = dangerColor.withOpacity(0.1);
         textColor = dangerColor;
         label = 'Đã hủy';

@@ -94,14 +94,17 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
         Uri.parse(
           'https://mocha-exchange-scoff.ngrok-free.dev/api/chat/conversations?userId=$_doctorId&isDoctor=true',
         ),
-        headers: {'Content-Type': 'application/json'},
+        headers: {
+          'Content-Type': 'application/json',
+          'ngrok-skip-browser-warning': 'true',
+        },
       );
 
       if (response.statusCode == 200) {
         final List<dynamic> data = jsonDecode(response.body);
         if (mounted) {
           setState(() {
-            _conversations = data.map((json) {
+            final parsedConversations = data.map((json) {
               return Conversation(
                 id: json['id'] ?? '',
                 patientId: json['userId'] ?? '',
@@ -114,6 +117,18 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
                 unreadCount: json['unreadCount'] ?? 0,
               );
             }).toList();
+
+            // Sắp xếp các cuộc trò chuyện theo lastMessageTime giảm dần (mới nhất lên đầu)
+            parsedConversations.sort((a, b) {
+              if (a.lastMessageTime == null && b.lastMessageTime == null) {
+                return 0;
+              }
+              if (a.lastMessageTime == null) return 1;  // a không có tin nhắn -> xếp sau
+              if (b.lastMessageTime == null) return -1; // b không có tin nhắn -> xếp sau
+              return b.lastMessageTime!.compareTo(a.lastMessageTime!);
+            });
+
+            _conversations = parsedConversations;
             if (showLoading) _isLoading = false;
           });
         }
@@ -242,7 +257,7 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
                           final url = Uri.parse(
                             'https://mocha-exchange-scoff.ngrok-free.dev/api/chat/conversation/${conversation.id}/read?readerId=$_doctorId',
                           );
-                          await http.post(url);
+                          await http.post(url, headers: {'ngrok-skip-browser-warning': 'true'});
                         } catch (e) {
                           print('Error marking conversation as read: $e');
                         }

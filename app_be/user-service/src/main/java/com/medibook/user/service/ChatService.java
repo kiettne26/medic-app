@@ -150,7 +150,7 @@ public class ChatService {
                         conversations = conversationRepository.findByUserId(userId);
                 }
 
-                return conversations.stream().map(conv -> {
+                java.util.List<com.medibook.user.dto.ConversationDto> dtoList = conversations.stream().map(conv -> {
                         // Get last message
                         var lastMsgOpt = messageRepository.findTopByConversationIdOrderByCreatedAtDesc(conv.getId());
                         String lastMessage = lastMsgOpt.map(Message::getContent).orElse("");
@@ -195,6 +195,18 @@ public class ChatService {
                                         .unreadCount(unreadCount)
                                         .build();
                 }).collect(java.util.stream.Collectors.toList());
+
+                // Sắp xếp các cuộc trò chuyện theo lastMessageTime giảm dần (mới nhất lên đầu)
+                dtoList.sort((a, b) -> {
+                        String timeA = a.getLastMessageTime();
+                        String timeB = b.getLastMessageTime();
+                        if (timeA.isEmpty() && timeB.isEmpty()) return 0;
+                        if (timeA.isEmpty()) return 1;  // a không có tin nhắn -> xếp sau
+                        if (timeB.isEmpty()) return -1; // b không có tin nhắn -> xếp sau
+                        return timeB.compareTo(timeA);  // Thời gian mới hơn lên đầu
+                });
+
+                return dtoList;
         }
 
         @Transactional

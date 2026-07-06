@@ -516,21 +516,7 @@ class _AppointmentScreenState extends ConsumerState<AppointmentScreen>
       case 'CONFIRMED':
         return [
           ElevatedButton.icon(
-            onPressed: () async {
-              final success = await controller.completeBooking(booking.id);
-              if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      success ? 'Đã hoàn thành lịch hẹn' : 'Có lỗi xảy ra',
-                    ),
-                    backgroundColor: success
-                        ? AppointmentScreen.successColor
-                        : AppointmentScreen.dangerColor,
-                  ),
-                );
-              }
-            },
+            onPressed: () => _showCompleteDialog(context, booking.id, controller),
             style: ElevatedButton.styleFrom(
               backgroundColor: AppointmentScreen.successColor,
               foregroundColor: Colors.white,
@@ -642,6 +628,109 @@ class _AppointmentScreenState extends ConsumerState<AppointmentScreen>
               backgroundColor: AppointmentScreen.dangerColor,
             ),
             child: const Text('Xác nhận từ chối'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showCompleteDialog(
+    BuildContext context,
+    String bookingId,
+    AppointmentController controller,
+  ) {
+    final diagnosisController = TextEditingController();
+    final adviceController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(
+          'Hoàn thành lịch hẹn',
+          style: GoogleFonts.manrope(fontWeight: FontWeight.bold),
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Chẩn đoán bệnh',
+                style: GoogleFonts.manrope(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: const Color(0xFF0C131D),
+                ),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: diagnosisController,
+                decoration: const InputDecoration(
+                  hintText: 'Nhập chẩn đoán (ví dụ: Viêm họng cấp)...',
+                  border: OutlineInputBorder(),
+                  contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                ),
+                maxLines: 2,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Dặn dò của bác sĩ',
+                style: GoogleFonts.manrope(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: const Color(0xFF0C131D),
+                ),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: adviceController,
+                decoration: const InputDecoration(
+                  hintText: 'Nhập dặn dò (ví dụ: Nghỉ ngơi, uống nhiều nước)...',
+                  border: OutlineInputBorder(),
+                  contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                ),
+                maxLines: 3,
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Hủy'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(dialogContext);
+              final diagnosis = diagnosisController.text.trim();
+              final advice = adviceController.text.trim();
+
+              final List<String> notesParts = [];
+              if (diagnosis.isNotEmpty) notesParts.add('Chẩn đoán: $diagnosis');
+              if (advice.isNotEmpty) notesParts.add('Dặn dò: $advice');
+              final fullNotes = notesParts.join('\n');
+
+              final success = await controller.completeBooking(
+                bookingId,
+                notes: fullNotes,
+              );
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      success ? 'Đã hoàn thành lịch hẹn' : 'Có lỗi xảy ra',
+                    ),
+                    backgroundColor: success
+                        ? AppointmentScreen.successColor
+                        : AppointmentScreen.dangerColor,
+                  ),
+                );
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppointmentScreen.successColor,
+            ),
+            child: const Text('Hoàn thành'),
           ),
         ],
       ),
